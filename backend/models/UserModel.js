@@ -20,11 +20,15 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       match: [emailRegex, 'Please provide a valid email'],
     },
+    newEmail: {
+      type: String,
+      default: null,
+    },
     password: {
       type: String,
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters long'],
-      select: false, // optional: hides password by default in queries
+      select: false, 
     },
     role: {
       type: String,
@@ -63,21 +67,19 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Normalize email consistently
 userSchema.pre('validate', function () {
   if (this.email && typeof this.email === 'string') {
     this.email = this.email.trim().toLowerCase();
   }
 });
 
-// Hash password (Mongoose async middleware style)
+
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
 });
 
 userSchema.methods.comparePassword = function (candidatePassword) {
-  // if you use select:false, make sure you query with .select('+password') when logging in
   return bcrypt.compare(candidatePassword, this.password);
 };
 

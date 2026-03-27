@@ -25,32 +25,26 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white flex items-center justify-center p-4">
-      <div
-        className="w-full max-w-[807px] rounded-[25px] px-8 py-12 sm:px-16 sm:py-16"
-        style={{ backgroundColor: "#8E6251" }}
-      >
+    <div className="min-h-screen w-full bg-[#FDF6EC] flex items-center justify-center p-4">
+      <div className="w-full max-w-[807px] rounded-[35px] border border-[#D4A96A]/20 px-8 py-12 sm:px-16 sm:py-16 shadow-lg bg-[#F5E6D3]">
         {/* Title */}
-        <h1 className="text-white font-extrabold text-center leading-tight mb-6 text-4xl sm:text-5xl lg:text-[55px]">
+        <h1 className="text-[#6B3F1F] font-black text-center leading-tight mb-6 text-4xl sm:text-5xl lg:text-[55px]">
           Forgot your Password
         </h1>
 
         {/* Subtitle */}
-        <p
-          className="text-white text-center text-base sm:text-lg lg:text-[23px] leading-snug mb-6"
-          style={{ opacity: 0.7 }}
-        >
-          Please enter the Email address, associated with your account. We will
+        <p className="text-[#A0522D] font-medium text-center text-base sm:text-lg lg:text-[23px] leading-snug mb-6">
+          Please enter the Email address associated with your account. We will
           send a password reset link.
         </p>
 
         {message && (
-          <p className="text-center text-sm text-green-200 mb-4">
+          <p className="text-center font-bold text-lg text-green-600 mb-4">
             {message}
           </p>
         )}
         {error && (
-          <p className="text-center text-sm text-red-200 mb-4">
+          <p className="text-center font-bold text-lg text-red-500 mb-4">
             {error}
           </p>
         )}
@@ -63,15 +57,14 @@ export default function ForgotPassword() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email..."
-            className="w-full max-w-[394px] rounded-[10px] bg-white px-5 py-4 text-[15px] font-light text-[#2B2222] outline-none border-none placeholder:text-[#2B2222] placeholder:font-extralight"
+            className="w-full max-w-[394px] rounded-2xl bg-white px-6 py-4 text-lg font-bold text-[#6B3F1F] shadow-sm focus:ring-4 focus:ring-[#D4A96A]/20 outline-none border-none placeholder:text-[#A0522D]/70 transition-all"
           />
 
           {/* Send Reset Link Button */}
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center justify-center gap-3 w-full max-w-[394px] rounded-[18px] px-6 py-3 text-black font-semibold text-lg sm:text-[20px] cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ backgroundColor: "#B3A9A9" }}
+            className="flex items-center justify-center gap-3 w-full max-w-[394px] rounded-2xl px-6 py-4 bg-[#6B3F1F] text-white font-black text-xl sm:text-2xl shadow-xl hover:bg-[#A0522D] transition-all active:scale-95 disabled:opacity-60 disabled:active:scale-100"
           >
             <svg
               width="24"
@@ -81,7 +74,7 @@ export default function ForgotPassword() {
               xmlns="http://www.w3.org/2000/svg"
               className="flex-shrink-0"
             >
-              <path d="M3 20V14L11 12L3 10V4L22 12L3 20Z" fill="black" />
+              <path d="M3 20V14L11 12L3 10V4L22 12L3 20Z" fill="white" />
             </svg>
             {loading ? "Sending..." : "Send reset link"}
           </button>
@@ -89,7 +82,7 @@ export default function ForgotPassword() {
           {/* Back to Login */}
           <Link
             to="/login"
-            className="text-black text-xl sm:text-[25px] font-normal hover:underline"
+            className="text-[#6B3F1F] text-xl sm:text-2xl font-black hover:text-[#A0522D] transition-colors"
           >
             Back to Login
           </Link>

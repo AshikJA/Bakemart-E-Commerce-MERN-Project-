@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const User = require('../models/UserModel');
+const Address = require('../models/AddressModel');
 const { generateToken } = require('../utils/jwt');
 const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer');
 
@@ -93,7 +94,6 @@ class UserService {
     try {
       const user = await User.findByEmail(email);
       if (!user) {
-        // For security, do not reveal whether user exists
         return { message: 'If that email exists, a reset link has been sent.' };
       }
 
@@ -126,7 +126,7 @@ class UserService {
         throw { status: 400, message: 'Invalid or expired reset link' };
       }
 
-      user.password = password; // will be hashed by pre('save')
+      user.password = password;
       user.resetPasswordToken = null;
       user.resetPasswordExpiresAt = null;
       await user.save();
@@ -135,6 +135,130 @@ class UserService {
     } catch (error) {
       console.error('Error resetting password:', error);
       throw error.status ? error : { status: 500, message: 'Error resetting password' };
+    }
+  }
+
+  static async getProfile(userId) {
+    try {
+      if (!userId) throw { status: 401, message: 'User ID missing in token' };
+      const user = await User.findById(userId);
+      if (!user) throw { status: 404, message: 'User not found' };
+
+      const addresses = await Address.find({ user: userId });
+      return {
+        user: user.getPublicProfile(),
+        addresses
+      };
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      throw { status: 500, message: 'Error fetching profile' };
+    }
+  }
+
+  static async updateProfile(userId, data) {
+    try {
+      if (!userId) throw { status: 401, message: 'User ID missing in token' };
+      const user = await User.findById(userId);
+      if (!user) throw { status: 404, message: 'User not found' };
+
+      if (data.email && data.email !== user.email) {
+        const existing = await User.findOne({ email: data.email });
+        if (existing) throw { status: 400, message: 'Email already in use' };
+
+        const otp = generateOtp();
+        user.newEmail = data.email;
+        user.otpCode = otp;
+        user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        
+        user.name = data.name || user.name;
+        await user.save();
+        await sendOtpEmail(data.email, otp);
+
+        return {
+          message: 'OTP sent to new email. Please verify to update.',
+          requireEmailVerification: true,
+          user: user.getPublicProfile()
+        };
+      }
+
+      user.name = data.name || user.name;
+      await user.save();
+
+      return {
+        message: 'Profile updated successfully',
+        user: user.getPublicProfile()
+      };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error.status ? error : { status: 500, message: 'Error updating profile' };
+    }
+  }
+
+  static async verifyEmailUpdate(userId, otp) {
+    try {
+      if (!userId) throw { status: 401, message: 'User ID missing in token' };
+      const user = await User.findById(userId);
+      if (!user) throw { status: 404, message: 'User not found' };
+
+      if (!user.newEmail || !user.otpCode || !user.otpExpiresAt) {
+        throw { status: 400, message: 'No pending email update or expired code' };
+      }
+      
+      const now = new Date();
+      if (user.otpCode !== otp || now > user.otpExpiresAt) {
+        throw { status: 400, message: 'Invalid or expired code' };
+      }
+
+      user.email = user.newEmail;
+      user.newEmail = null;
+      user.otpCode = null;
+      user.otpExpiresAt = null;
+      await user.save();
+
+      return {
+        message: 'Email updated successfully',
+        user: user.getPublicProfile()
+      };
+    } catch (error) {
+      console.error('Error verifying email update:', error);
+      throw error.status ? error : { status: 500, message: 'Error verifying email update' };
+    }
+  }
+
+  static async addAddress(userId, data) {
+    try {
+      const address = await Address.create({ ...data, user: userId });
+      return { message: 'Address added successfully', address };
+    } catch (error) {
+      console.error('Error adding address:', error);
+      throw { status: 500, message: 'Error adding address' };
+    }
+  }
+
+  static async deleteAddress(userId, addressId) {
+    try {
+      const result = await Address.findOneAndDelete({ _id: addressId, user: userId });
+      if (!result) throw { status: 404, message: 'Address not found' };
+      return { message: 'Address deleted successfully' };
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      throw error.status ? error : { status: 500, message: 'Error deleting address' };
+    }
+  }
+
+  static async updateAddress(userId, addressId, data) {
+    try {
+      if (!userId) throw { status: 401, message: 'User ID missing in token' };
+      const address = await Address.findOneAndUpdate(
+        { _id: addressId, user: userId },
+        data,
+        { new: true }
+      );
+      if (!address) throw { status: 404, message: 'Address not found' };
+      return { message: 'Address updated successfully', address };
+    } catch (error) {
+      console.error('Error updating address:', error);
+      throw error.status ? error : { status: 500, message: 'Error updating address' };
     }
   }
 }

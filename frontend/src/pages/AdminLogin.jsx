@@ -4,6 +4,7 @@ import "../styles/index.css";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
+import { toast } from 'react-toastify';
 
 function AdminLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -26,13 +27,16 @@ function AdminLogin() {
     try {
       const res = await api.post("/admin/login", form);
       setSuccess("Admin login successful");
+      toast.success("Admin login successful");
       // Save admin token and role
       localStorage.setItem("adminToken", res.data.token);
       localStorage.setItem("role", "admin");
       navigate("/admin/dashboard", { replace: true });
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Admin login failed");
+      const msg = err.response?.data?.message || "Admin login failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

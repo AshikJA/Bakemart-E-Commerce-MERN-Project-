@@ -41,8 +41,8 @@ function Login() {
     <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
       <div className="w-full max-w-md mx-4 bg-slate-900/70 border border-slate-800 rounded-2xl shadow-xl p-8 space-y-6">
         <header className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Login</h1>
-          <p className="text-sm text-slate-400">Create your account.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome Back</h1>
+          {/* <p className="text-sm text-slate-400">Create your account.</p> */}
         </header>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
@@ -88,7 +88,7 @@ function Login() {
             </div>
           </div>
           <div>
-            <Link to='/forget-password' > Forget Password</Link >
+            <Link to='/forgot-password' > Forgot Password</Link >
           </div>
 
           <button

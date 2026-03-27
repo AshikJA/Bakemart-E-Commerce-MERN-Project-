@@ -1,42 +1,20 @@
-import { Routes, Route } from "react-router-dom";
-import Register from "./pages/Register";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import ProtectedRoute from "./components/ProtectedRoute";
-import PublicRoute from "./components/PublicRoute";
-import VerifyOtp from "./pages/VerifyOtp";
-import ForgetPassword from "./pages/ForgetPassword";
-import ResetPassword from "./pages/ResetPassword";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDasboard from "./pages/AdminDasboard";
+import React from 'react'
+import { Routes, Route } from 'react-router-dom'
+import UsersRoutes from './routes/UsersRoutes'
+import AdminRoutes from './routes/AdminRoutes'
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute> 
-        }
-      />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/admin/login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute requireAdmin={true}>
-            <AdminDasboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
-      <Route path="/forget-password" element={<PublicRoute><ForgetPassword /></PublicRoute>} />
-      <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
-    </Routes>
-  );
+    <div>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <Routes>
+        <Route path="/*" element={<UsersRoutes />} />
+        <Route path="/admin/*" element={<AdminRoutes />} />
+      </Routes>
+    </div>
+  )
 }
 
-export default App;
+export default App

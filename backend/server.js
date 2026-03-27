@@ -1,12 +1,11 @@
 const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const helmet = require('helmet');
+const http = require('http')
 
 const config = require('./config/config');
 const DatabaseConnection = require('./config/database');
 const setupRoutes = require('./routes');
 const { seedDefaultAdmin } = require('./utils/seedAdmin');
+const setupMiddlewares = require('./middlewares/setup');
 
 class Server {
   constructor() {
@@ -33,13 +32,8 @@ class Server {
   }
 
   middlewares() {
-    this.app.use(helmet());
-    this.app.use(cors({
-      origin: 'http://localhost:5173',
-      credentials: false,
-    }));
-    this.app.use(express.json());
-  }
+    setupMiddlewares(this.app);
+    }
 
   routes() {
     // API routes
@@ -49,6 +43,11 @@ class Server {
     this.app.get('/', (req, res) => {
       res.json({ message: 'API is running' });
     });
+
+    // Error handling middlewares
+    const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
+    this.app.use(notFound);
+    this.app.use(errorHandler);
   }
 
   start() {

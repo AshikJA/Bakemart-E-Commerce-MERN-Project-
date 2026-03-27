@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 
-const generateToken = (userId) => {
+const generateToken = (payload) => {
   try {
-    return jwt.sign({ userId }, config.JWT_SECRET, { 
-      expiresIn: config.JWT_EXPIRATION || '1h' });
+    return jwt.sign(payload, config.JWT_SECRET, { 
+      expiresIn: config.JWT_EXPIRATION || '30d' });
   } catch (error) {
     console.log('Error generating token:', error);
     throw new Error('Error generating token');
