@@ -30,6 +30,12 @@ const userSchema = new mongoose.Schema(
       minlength: [6, 'Password must be at least 6 characters long'],
       select: false, 
     },
+    confirmPassword: {
+      type: String,
+      required: [true, 'Confirm password is required'],
+      minlength: [6, 'Confirm password must be at least 6 characters long'],
+      select: false,
+    },  
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -51,6 +57,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['active', 'banned'],
       default: 'active',
+      index: true,
     },
     resetPasswordToken: {
       type: String,
@@ -60,12 +67,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    walletBalance: { type: Number, default: 0 },
     banReason: { type: String, default: null },
     bannedAt: { type: Date, default: null },
     bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );
+
+userSchema.index({ role: 1, status: 1 });
 
 userSchema.pre('validate', function () {
   if (this.email && typeof this.email === 'string') {
@@ -83,9 +93,14 @@ userSchema.methods.comparePassword = function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+userSchema.methods.compareConfirmPassword = function (candidateConfirmPassword) {
+  return bcrypt.compare(candidateConfirmPassword, this.confirmPassword);
+};
+
 userSchema.methods.getPublicProfile = function () {
   const userObject = this.toObject();
   delete userObject.password;
+  delete userObject.confirmPassword;
   return userObject;
 };
 

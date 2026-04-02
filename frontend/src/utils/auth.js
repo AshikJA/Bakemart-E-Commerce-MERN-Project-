@@ -3,6 +3,7 @@ export function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('adminToken');
   localStorage.removeItem('role');
+  window.dispatchEvent(new Event('authChange'));
 }
 
 export function getCurrentRole() {

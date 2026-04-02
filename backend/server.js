@@ -10,6 +10,7 @@ const setupMiddlewares = require('./middlewares/setup');
 class Server {
   constructor() {
     this.app = express();
+    this.app.set('trust proxy', 1);
     this.port = config.PORT;
     this.server = http.createServer(this.app);
   }

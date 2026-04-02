@@ -6,6 +6,7 @@ const addressSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
     },
     name: {
       type: String,
@@ -39,5 +40,7 @@ const addressSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+addressSchema.index({ user: 1, isDefault: 1 });
 
 module.exports = mongoose.model('Address', addressSchema);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/client';
 import ProductCard from '../components/ProductCard';
+import Loading from '../components/Loading';
 import { FiSearch, FiFilter, FiChevronRight } from 'react-icons/fi';
 import { GiChocolateBar } from 'react-icons/gi';
 
@@ -8,12 +9,32 @@ function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchingProducts, setFetchingProducts] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const searchInputRef = useRef(null);
   const gridRef = useRef(null);
+  
+  const activeCategories = categories.filter(c => !c.isBlocked);
+  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const paginatedProducts = products.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    if (gridRef.current) {
+        gridRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchInitialData();
@@ -31,57 +52,53 @@ function Home() {
     return () => window.removeEventListener('triggerSearchFocus', handleTriggerSearch);
   }, []);
 
-  // Reset to page 1 when filters change
+
   useEffect(() => {
+    fetchProducts();
     setCurrentPage(1);
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, debouncedSearch]);
 
   const fetchInitialData = async () => {
     try {
-      const [prodRes, catRes] = await Promise.all([
-        api.get('/products'),
-        api.get('/admin/categories') // Using existing cat route, hopefully it's public enough or we might need a public one
-      ]);
-      setProducts(prodRes.data);
+      const catRes = await api.get('/admin/categories');
       setCategories(catRes.data);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Error fetching categories:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    // Check if the product's category is blocked
-    const categoryInfo = categories.find(c => c.name === product.category);
-    if (categoryInfo && categoryInfo.isBlocked) return false;
+  const fetchProducts = async (currentCategories = categories) => {
+    setFetchingProducts(true);
+    try {
+      const params = {};
+      if (selectedCategory !== 'All') params.category = selectedCategory;
+      if (debouncedSearch) params.search = debouncedSearch;
 
-    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  const activeCategories = categories.filter(c => !c.isBlocked);
-
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    if (gridRef.current) {
-        gridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const res = await api.get('/products', { params });
+      
+      const productsData = res.data.products || res.data;
+      
+      const catsToUse = currentCategories.length > 0 ? currentCategories : categories;
+      
+      const activeCategoryNames = catsToUse.filter(c => !c.isBlocked).map(c => c.name);
+      const filtered = productsData.filter(p => activeCategoryNames.includes(p.category) || selectedCategory === p.category);
+      
+      setProducts(filtered);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+    } finally {
+      setFetchingProducts(false);
     }
   };
+  useEffect(() => {
+    if (!loading) {
+      fetchProducts();
+      setCurrentPage(1);
+    }
+  }, [selectedCategory, debouncedSearch, categories.length]);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDF6EC]">
-      <div className="animate-bounce">
-        <GiChocolateBar className="text-6xl text-[#6B3F1F]" />
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-[#FDF6EC]">
@@ -96,16 +113,18 @@ function Home() {
             <span className="inline-block px-4 py-1 rounded-full bg-[#D4A96A] text-[#6B3F1F] text-sm font-black uppercase tracking-widest">
               Premium Collection 2026
             </span>
-            <h1 className="text-6xl md:text-7xl font-black text-[#FDF6EC] leading-tight tracking-tighter">
+            <h1 className="text-4xl md:text-7xl font-black text-[#FDF6EC] leading-tight tracking-tighter">
               Indulge in <span className="text-[#D4A96A]">Pure</span> Chocolate Bliss.
             </h1>
             <p className="text-xl text-[#F5E6D3] opacity-80 max-w-lg leading-relaxed">
               Handcrafted artisanal chocolates and premium baking supplies delivered right to your doorstep.
             </p>
             <div className="pt-6 flex gap-4">
-              <button className="px-8 py-4 bg-[#D4A96A] text-[#6B3F1F] font-bold rounded-2xl shadow-lg hover:bg-[#FDF6EC] transition-all flex items-center gap-2">
-                Explore Shop <FiChevronRight />
-              </button>
+              <a href="#products-grid">
+                <button className="px-8 py-4 bg-[#D4A96A] text-[#6B3F1F] font-bold rounded-2xl shadow-lg hover:bg-[#FDF6EC] transition-all flex items-center gap-2">
+                  Explore Shop <FiChevronRight />
+                </button>
+              </a>
               
               {/* Category Dropdown in Hero */}
               <div className="relative group">
@@ -129,7 +148,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Filter & Search Bar */}
+      {/* Search Bar */}
       <div className="max-w-7xl mx-auto px-6 -mt-10 relative z-20">
         <div className="bg-white p-6 rounded-[35px] shadow-2xl border border-[#D4A96A]/20 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
@@ -143,24 +162,6 @@ function Home() {
               className="w-full pl-14 pr-6 py-4 rounded-2xl bg-gray-50 border-none focus:ring-4 focus:ring-[#D4A96A]/20 transition-all outline-none text-[#6B3F1F] font-medium"
             />
           </div>
-          
-          <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
-            <button 
-              onClick={() => setSelectedCategory('All')}
-              className={`px-8 py-4 rounded-2xl font-bold whitespace-nowrap transition-all ${selectedCategory === 'All' ? 'bg-[#6B3F1F] text-white shadow-lg' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-            >
-              All
-            </button>
-            {activeCategories.map(cat => (
-              <button 
-                key={cat._id}
-                onClick={() => setSelectedCategory(cat.name)}
-                className={`px-8 py-4 rounded-2xl font-bold whitespace-nowrap transition-all ${selectedCategory === cat.name ? 'bg-[#6B3F1F] text-white shadow-lg' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -169,17 +170,22 @@ function Home() {
         <div className="flex items-center justify-between mb-12">
           <div>
             <h2 className="text-4xl font-black text-[#6B3F1F] tracking-tight">Our Sweet Finds</h2>
-            <p className="text-[#A0522D] font-medium mt-1">Found {filteredProducts.length} delicious items</p>
+            <p className="text-[#A0522D] font-medium mt-1">Found {products.length} delicious items</p>
           </div>
         </div>
 
-        {paginatedProducts.length > 0 ? (
+        {fetchingProducts ? (
+           <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B3F1F]"></div>
+           </div>
+        ) : products.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {paginatedProducts.map(product => (
                 <ProductCard key={product._id} product={product} />
               ))}
             </div>
+
 
             {/* Pagination Controls */}
             {totalPages > 1 && (

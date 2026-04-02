@@ -19,6 +19,9 @@ class UserService {
       if (existingUser) {
         throw { status: 400, message: 'User already exists' };
       }
+      if (data.password !== data.confirmPassword) {
+        throw { status: 400, message: 'Passwords do not match' };
+      }
       const user = await User.create(data);
       const otp = generateOtp();
       user.otpCode = otp;
@@ -46,6 +49,13 @@ class UserService {
       const isPasswordValid = await user.comparePassword(password);
       if (!isPasswordValid) {
         throw { status: 401, message: 'Invalid email or password' };
+      }
+
+      if (user.status === 'banned') {
+        throw { 
+          status: 403, 
+          message: `Your account has been banned. Reason: ${user.banReason || 'Violation of terms of service'}. Please contact support.`
+        };
       }
 
       user.lastLogin = new Date();

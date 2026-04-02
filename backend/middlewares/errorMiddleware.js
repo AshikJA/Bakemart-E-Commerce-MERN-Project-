@@ -5,7 +5,6 @@ const errorHandler = (err, req, res, next) => {
   let message = err.message || 'Internal Server Error';
   let details = err.details || null;
 
-
   if (err.name === 'ValidationError') {
     statusCode = 400;
     message = err.message || 'Validation Error';
@@ -18,6 +17,12 @@ const errorHandler = (err, req, res, next) => {
   } else if (err.code === 11000) {
     statusCode = 400;
     message = 'Duplicate field value entered';
+  } else if (err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = 400;
+    message = 'File size exceeds the maximum limit of 5MB';
+  } else if (err.message && err.message.includes('Invalid file type')) {
+    statusCode = 400;
+    message = err.message;
   }
 
   res.status(statusCode).json({

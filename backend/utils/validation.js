@@ -22,12 +22,14 @@ const resetPasswordSchema = Joi.object({
 });
   
 const addProductSchema = Joi.object({
-  name: Joi.string().min(2).max(50).trim().required(),
+  name: Joi.string().min(2).max(100).trim().required(),
   price: Joi.number().required(),
   description: Joi.string().required(),
   category: Joi.string().required(),
   stock: Joi.number().required(),
-  image: Joi.string().required()
+  image: Joi.string().optional(),
+  images: Joi.array().items(Joi.string()).min(1).required(),
+  weight: Joi.number().allow('', null).optional()  
 });
 
 const addCategorySchema = Joi.object({

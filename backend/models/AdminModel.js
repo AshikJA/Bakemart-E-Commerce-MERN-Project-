@@ -36,10 +36,13 @@ const adminSchema = new mongoose.Schema(
       type: String,
       enum: ['active', 'disabled'],
       default: 'active',
+      index: true,
     },
   },
   { timestamps: true }
 );
+
+
 
 adminSchema.pre('validate', function () {
   if (this.email && typeof this.email === 'string') {

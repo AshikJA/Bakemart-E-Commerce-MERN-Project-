@@ -11,10 +11,10 @@ export default function AdminDasboard() {
     users: { count: 0, change: '' },
     products: { count: 0, change: '' },
     orders: { count: 0, change: '' },
-    categories: { count: 0, change: '' },
+    revenue: { count: 0, change: '' },
   });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [categoriesCount, setCategoriesCount] = useState(0);
+  const [revenueCount, setRevenueCount] = useState(0);
   const [productsCount, setProductsCount] = useState(0);   
   const [usersCount, setUsersCount] = useState(0);
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export default function AdminDasboard() {
       setRecentOrders(recentOrders || []);
       setUsersCount(stats.users.count);
       setProductsCount(stats.products.count);
-      setCategoriesCount(stats.categories.count);
+      setRevenueCount(stats.revenue.count);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch dashboard data');
@@ -85,6 +85,7 @@ export default function AdminDasboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Users Card */}
+          <Link to="/admin/admin-user-list">
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-start space-x-4">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,8 +98,10 @@ export default function AdminDasboard() {
               <p className="text-xs text-slate-400 mt-1">{stats.users.change}</p>
             </div>
           </div>
+          </Link>
 
           {/* Products Card */}
+          <Link to="/admin/admin-product-list">
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-start space-x-4">
             <div className="p-3 bg-green-50 text-green-600 rounded-lg">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,9 +114,11 @@ export default function AdminDasboard() {
               <p className="text-xs text-slate-400 mt-1">{stats.products.change}</p>
             </div>
           </div>
+          </Link>
 
           {/* Orders Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-start space-x-4">
+          <Link to="/admin/view-orders">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-start space-x-4 hover:shadow-md transition-shadow cursor-pointer">
             <div className="p-3 bg-yellow-50 text-yellow-600 rounded-lg">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -121,24 +126,26 @@ export default function AdminDasboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-500">Total Orders</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{recentOrders.length}</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.orders?.count || 0}</h3>
               <p className="text-xs text-slate-400 mt-1">{stats.orders.change}</p>
             </div>
           </div>
+          </Link>
 
-          {/* Categories Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-start space-x-4">
+          <Link to="/admin/revenue">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-start space-x-4 hover:shadow-md transition-shadow cursor-pointer">
             <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-500">Categories</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{categoriesCount}</h3>
-              <p className="text-xs text-slate-400 mt-1">{stats.categories.change}</p>
+              <p className="text-sm font-medium text-slate-500">Total Revenue</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">₹{revenueCount?.toLocaleString() || 0}</h3>
+              <p className="text-xs text-slate-400 mt-1">{stats.revenue?.change || 'From paid orders'}</p>
             </div>
           </div>
+          </Link>
         </div>
 
         {/* Content Section */}
@@ -166,13 +173,13 @@ export default function AdminDasboard() {
                       <td className="px-6 py-4 font-medium text-blue-600 whitespace-nowrap">
                         {order._id || order.id}
                       </td>
-                      <td className="px-6 py-4 text-slate-700">{order.customer?.name || order.customer || 'Unknown'}</td>
+                      <td className="px-6 py-4 text-slate-700">{order.user?.name || order.shippingAddress?.name || order.customer?.name || order.customer || 'Unknown'}</td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          {order.status || 'Pending'}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.orderStatus === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {order.orderStatus || order.status || 'Pending'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-700">₹{order.total || '0'}</td>
+                      <td className="px-6 py-4 text-slate-700">₹{order.totalAmount || order.total || '0'}</td>
                       <td className="px-6 py-4 text-slate-500">{new Date(order.createdAt || order.date).toLocaleDateString()}</td>
                     </tr>
                   )) : (
@@ -186,12 +193,12 @@ export default function AdminDasboard() {
               </table>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50">
-              <button className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center">
+              <Link to="/admin/view-orders" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center w-max">
                 View all orders 
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </button>
+              </Link>
             </div>
           </div>
 

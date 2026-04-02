@@ -8,6 +8,7 @@ const {
 } = require('../utils/validation');
 const UserService = require('../services/UserService');
 
+
 class UserController extends BaseController {
   
   static registerUser = BaseController.asyncHandler(async (req, res) => {

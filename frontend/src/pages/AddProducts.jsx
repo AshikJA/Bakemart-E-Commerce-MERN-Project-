@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/client';
 import { useNavigate } from 'react-router-dom'; 
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';  
+import { FiX } from 'react-icons/fi';
 
 function AddProducts() {
   const [name, setName] = useState('');
@@ -10,9 +11,10 @@ function AddProducts() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [stock, setStock] = useState('');
-  const [image, setImage] = useState(null);
+  const [weight, setWeight] = useState(''); 
+  const [images, setImages] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
-  const [preview, setPreview] = useState('');
+  const [previews, setPreviews] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,11 +26,7 @@ function AddProducts() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/admin/categories', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        }
-      });
+      const response = await api.get('/admin/categories');
       setCategories(response.data);
     } catch (err) {
       console.error('Error fetching categories:', err);
@@ -36,23 +34,59 @@ function AddProducts() {
   };
 
   const onFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setImageUrl(''); 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files);
+    
+    setImages(prevImages => {
+      const combinedFiles = [...prevImages, ...files].slice(0, 5); // Limit to 5
+      if (combinedFiles.length > 0) {
+        setImageUrl(''); 
+        
+        const newPreviews = [];
+        combinedFiles.forEach(file => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            newPreviews.push(reader.result);
+            if (newPreviews.length === combinedFiles.length) {
+              setPreviews([...newPreviews]); 
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      return combinedFiles;
+    });
+  };
+
+  const removeImage = (indexToRemove) => {
+    setImages(prevImages => {
+      const remainingFiles = prevImages.filter((_, idx) => idx !== indexToRemove);
+      
+      if (remainingFiles.length === 0) {
+        setPreviews([]);
+        return [];
+      }
+      
+      const newPreviews = [];
+      remainingFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newPreviews.push(reader.result);
+          if (newPreviews.length === remainingFiles.length) {
+            setPreviews([...newPreviews]); 
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      return remainingFiles;
+    });
   };
 
   const onUrlChange = (e) => {
     const url = e.target.value;
     setImageUrl(url);
-    setImage(null); 
-    setPreview(url);
+    setImages([]); 
+    setPreviews([url]);
   };
 
   const onSubmit = async (e) => {
@@ -60,7 +94,7 @@ function AddProducts() {
     setLoading(true);
     setError('');
 
-    if (!name || !price || !description || !category || !stock || (!image && !imageUrl)) {
+    if (!name || !price || !description || !category || !stock || (images.length === 0 && !imageUrl)) {
       setError('Please fill in all fields.');
       setLoading(false);
       return;
@@ -72,27 +106,16 @@ function AddProducts() {
     formData.append('description', description);
     formData.append('category', category);
     formData.append('stock', stock);
+    formData.append('weight', weight);  
     
-    if (image) {
-      formData.append('image', image);
+    if (images.length > 0) {
+      images.forEach(img => formData.append('images', img));
     } else {
-      formData.append('image', imageUrl);
-    }
-
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      setError('Admin token missing. Please log in again.');
-      setLoading(false);
-      return;
+      formData.append('images', imageUrl);
     }
 
     try {
-      await axios.post('http://localhost:5000/api/admin/add-product', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await api.post('/admin/add-product', formData);
       toast.success('Product saved successfully!');
       navigate('/admin/dashboard');
     } catch (err) {
@@ -150,6 +173,17 @@ function AddProducts() {
         </div>
 
         <div className="col-span-2 md:col-span-1 space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">Weight</label>
+          <input
+            type="number"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+            placeholder="0"
+          />
+        </div>
+
+        <div className="col-span-2 md:col-span-1 space-y-2">
           <label className="block text-sm font-semibold text-gray-700">Stock Quantity</label>
           <input
             type="number"
@@ -181,6 +215,7 @@ function AddProducts() {
                   <label className="block text-xs font-medium text-gray-500 uppercase mb-2">Upload File</label>
                   <input 
                     type="file" 
+                    multiple
                     accept="image/*" 
                     onChange={onFileChange} 
                     className="block w-full text-sm text-slate-500
@@ -211,11 +246,26 @@ function AddProducts() {
                 </div>
               </div>
 
-              {preview && (
-                <div className="w-full md:w-1/3 space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase">Preview</p>
-                  <div className="h-32 w-full overflow-hidden border border-gray-200 rounded-xl bg-white flex items-center justify-center p-2">
-                    <img src={preview} alt="preview" className="max-h-full max-w-full object-contain rounded" />
+              {previews.length > 0 && (
+                <div className="w-full md:w-1/2 space-y-2">
+                  <p className="text-xs font-medium text-gray-500 uppercase flex justify-between">
+                    <span>Previews ({previews.length}/5)</span>
+                    {previews.length >= 5 && <span className="text-orange-500">Max limit reached</span>}
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto p-4 border border-gray-200 rounded-xl bg-white custom-scrollbar">
+                    {previews.map((preview, idx) => (
+                      <div key={idx} className="relative group flex-shrink-0">
+                         <img src={preview} alt={`preview ${idx}`} className="h-24 w-24 object-cover rounded-lg shadow-sm border border-gray-100" />
+                         <button 
+                           type="button" 
+                           onClick={() => removeImage(idx)} 
+                           className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 shadow-md"
+                           title="Remove image"
+                         >
+                           <FiX size={14} strokeWidth={3} />
+                         </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

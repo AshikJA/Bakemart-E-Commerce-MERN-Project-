@@ -22,6 +22,7 @@ function Profile() {
   });
   const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
   const [emailOtp, setEmailOtp] = useState('');
+  const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
 
   useEffect(() => {
     fetchProfile();
@@ -32,6 +33,10 @@ function Profile() {
       const response = await api.get('/auth/profile');
       setUser(response.data.user);
       setAddresses(response.data.addresses);
+      
+      // Also fetch wallet info
+      const walletRes = await api.get('/wallet');
+      setWallet(walletRes.data);
     } catch (err) {
       console.error('Error fetching profile:', err);
       toast.error('Failed to load profile data');
@@ -238,16 +243,65 @@ function Profile() {
           {activeTab === 'orders' && (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <FiShoppingBag className="text-8xl text-[#D4A96A] mb-6 opacity-40" />
-              <h2 className="text-3xl font-black text-[#6B3F1F]">Your Orders History</h2>
-              <p className="text-[#A0522D] mt-2 font-medium">Start shopping to see your purchase history!</p>
+              <h2 className="text-3xl font-black text-[#6B3F1F]">Manage Your Orders</h2>
+              <p className="text-[#A0522D] mt-2 font-medium mb-8">View, track, return, or cancel your purchases.</p>
+              <Link to="/view-orders">
+                <button className="px-8 py-4 bg-[#6B3F1F] text-white text-xl font-black rounded-2xl shadow-xl hover:bg-[#A0522D] transition-all active:scale-95">
+                  Go to My Orders
+                </button>
+              </Link>
             </div>
           )}
 
           {activeTab === 'wallet' && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <FiCreditCard className="text-8xl text-[#D4A96A] mb-6 opacity-40" />
-              <h2 className="text-3xl font-black text-[#6B3F1F]">Wallet Feature Coming Soon</h2>
-              <p className="text-[#A0522D] mt-2 font-medium">Manage your refunds and credits in one place.</p>
+            <div className="max-w-2xl mx-auto py-8">
+              <h2 className="text-4xl font-extrabold text-center mb-10 text-gray-800 tracking-tight">Your Wallet</h2>
+              
+              <div className="bg-[#6B3F1F] rounded-[40px] p-10 text-white shadow-2xl relative overflow-hidden mb-10">
+                <div className="relative z-10">
+                  <h3 className="text-white/70 font-bold uppercase tracking-widest text-xs mb-2">Available Balance</h3>
+                  <div className="text-5xl font-black text-[#D4A96A] tracking-tighter">
+                    ₹{wallet.balance.toFixed(2)}
+                  </div>
+                  <p className="mt-4 text-xs text-white/80 leading-relaxed">
+                    Refunds from cancelled or returned orders are credited here. You can use this balance for future purchases.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-black text-[#6B3F1F]">Recent Activity</h3>
+                  <Link to="/wallet" className="text-[#D4A96A] font-bold text-sm hover:underline">View All</Link>
+                </div>
+                
+                {wallet.transactions.length === 0 ? (
+                  <p className="text-center text-gray-400 py-10 italic">No transactions found.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {wallet.transactions.slice(0, 3).map((tx) => (
+                      <div key={tx._id} className="flex items-center justify-between p-5 bg-[#FDF6EC] rounded-2xl border border-[#D4A96A]/10">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-2 h-2 rounded-full ${tx.type === 'credit' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div>
+                            <h4 className="font-bold text-[#6B3F1F] text-sm">{tx.description}</h4>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className={`font-black ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                          {tx.type === 'credit' ? '+' : '-'}₹{tx.amount}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <Link to="/wallet">
+                  <button className="w-full py-4 mt-6 bg-[#6B3F1F] text-white text-xl font-black rounded-2xl shadow-xl hover:bg-[#A0522D] transition-all active:scale-95">
+                    Open Wallet Dashboard
+                  </button>
+                </Link>
+              </div>
             </div>
           )}
         </div>
