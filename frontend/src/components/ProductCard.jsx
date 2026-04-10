@@ -1,19 +1,37 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingCart } from 'react-icons/fi';
+import { FiShoppingCart, FiZap } from 'react-icons/fi';
 import { addToCart } from '../utils/cartUtils';
 import { toast } from 'react-toastify';
 import api from '../api/client';
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
+  const [selectedVariant, setSelectedVariant] = React.useState(null);
+
+  React.useEffect(() => {
+    if (product.variants && product.variants.length > 0) {
+      const defaultVariant = product.variants.find(v => v.isDefault) || product.variants[0];
+      setSelectedVariant(defaultVariant);
+    }
+  }, [product]);
 
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product);
-    toast.success(`${product.name} added to cart!`);
+    addToCart(product, 1, selectedVariant);
+    toast.success(`${product.name}${selectedVariant ? ` (${selectedVariant.name})` : ''} added to cart!`);
   };
+
+  const handleBuyNow = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product, 1, selectedVariant);
+    navigate('/checkout');
+  };
+
+  const currentPrice = selectedVariant ? selectedVariant.price : product.price;
+  const currentStock = selectedVariant ? selectedVariant.stock : product.stock;
 
   return (
     <div 
@@ -23,18 +41,18 @@ const ProductCard = ({ product }) => {
       {/* Image Container */}
       <div className="relative h-56 sm:h-64 overflow-hidden bg-[#FDF6EC]/50">
         <img 
-          src={product.image ? (product.image.startsWith('http') ? product.image : `${api.defaults.baseURL.replace('/api', '')}/uploads/${product.image}`) : 'https://via.placeholder.com/400x400?text=Chocolate'} 
+          src={product.image ? (product.image.startsWith('http') ? product.image : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${product.image}`) : 'https://via.placeholder.com/400x400?text=Chocolate'} 
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
         
         {/* Badges */}
-        {product.stock <= 5 && product.stock > 0 && (
+        {currentStock <= 5 && currentStock > 0 && (
           <div className="absolute top-4 left-4 bg-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg animate-pulse">
-            Only {product.stock} Left!
+            Only {currentStock} Left!
           </div>
         )}
-        {product.stock === 0 && (
+        {currentStock === 0 && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
             <span className="bg-[#6B3F1F] text-white text-xs font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl shadow-xl">
               Out of Stock
@@ -54,15 +72,34 @@ const ProductCard = ({ product }) => {
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</span>
             <div className="text-xl sm:text-2xl font-black text-[#6B3F1F]">
-              ₹{product.price}
+              {product.variants && product.variants.length > 0 ? (
+                <>
+                  {(() => {
+                    const prices = product.variants.map(v => v.price);
+                    const min = Math.min(...prices);
+                    const max = Math.max(...prices);
+                    return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
+                  })()}
+                </>
+              ) : (
+                `₹${product.price}`
+              )}
             </div>
           </div>
           <button 
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
+            disabled={currentStock === 0}
             className="p-3.5 bg-[#6B3F1F] text-[#FDF6EC] rounded-2xl hover:bg-[#A0522D] transition-all active:scale-95 shadow-md hover:shadow-xl disabled:opacity-50 disabled:grayscale"
           >
             <FiShoppingCart size={20} />
+          </button>
+          <button 
+            onClick={handleBuyNow}
+            disabled={currentStock === 0}
+            className="p-3.5 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-all active:scale-95 shadow-md hover:shadow-xl disabled:opacity-50 disabled:grayscale"
+            title="Buy Now"
+          >
+            <FiZap size={20} />
           </button>
         </div>
       </div>

@@ -37,9 +37,9 @@ class AdminService {
       throw error.status ? error : { status: 500, message: 'Error logging in admin' };
     }
   }
-  static async addProduct({ name, price, description, category, stock, image, images, weight }) {
+  static async addProduct({ name, price, description, category, stock, image, images, weight, variantType, variants }) {
     try {
-      const product = await Product.create({ name, price, description, category, stock, image, images, weight });
+      const product = await Product.create({ name, price, description, category, stock, image, images, weight, variantType, variants });
       return product;
     } catch (error) {
       console.error('Error adding product:', error);
@@ -158,6 +158,115 @@ class AdminService {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       throw { status: 500, message: 'Error fetching dashboard data' };
+    }
+  }
+  static async getSalesReport({ startDate, endDate }) {
+    try {
+      const matchStage = {
+        paymentStatus: 'paid',
+        orderStatus: { $nin: ['cancelled', 'returned'] }
+      };
+
+      if (startDate && endDate) {
+        matchStage.createdAt = {
+          $gte: new Date(startDate),
+          $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+        };
+      } else {
+        const defaultStart = new Date();
+        defaultStart.setDate(defaultStart.getDate() - 30);
+        defaultStart.setHours(0, 0, 0, 0);
+        matchStage.createdAt = {
+          $gte: defaultStart,
+          $lte: new Date()
+        };
+      }
+
+      const rootStats = await Order.aggregate([
+        { $match: matchStage },
+        { 
+          $group: { 
+            _id: null, 
+            totalRevenue: { $sum: '$totalAmount' }, 
+            totalOrders: { $sum: 1 }
+          } 
+        }
+      ]);
+
+      const revenue = rootStats[0]?.totalRevenue || 0;
+      const ordersCount = rootStats[0]?.totalOrders || 0;
+
+      const salesByDate = await Order.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            revenue: { $sum: '$totalAmount' },
+            orders: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, date: '$_id', revenue: 1, orders: 1 } }
+      ]) || [];
+
+      const productStats = await Order.aggregate([
+        { $match: matchStage },
+        { $unwind: '$items' },
+        {
+          $group: {
+            _id: '$items.name',
+            qty: { $sum: '$items.quantity' },
+            revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+          }
+        },
+        { $sort: { revenue: -1 } },
+        { $project: { _id: 0, name: '$_id', qty: 1, revenue: 1 } }
+      ]) || [];
+
+      const categoryStats = await Order.aggregate([
+        { $match: matchStage },
+        { $unwind: '$items' },
+        {
+          $lookup: {
+            from: 'products',
+            let: { productId: '$items.product' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', { $toObjectId: '$$productId' }] } } }
+            ],
+            as: 'productDetails'
+          }
+        },
+        { $unwind: { path: '$productDetails', preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: { 
+              $ifNull: [
+                '$items.category', 
+                { $ifNull: ['$productDetails.category', 'Uncategorized'] }
+              ] 
+            },
+            qty: { $sum: '$items.quantity' },
+            revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+          }
+        },
+        { $sort: { revenue: -1 } },
+        { $project: { _id: 0, category: '$_id', qty: 1, revenue: 1 } }
+      ]) || [];
+
+      const totalProductsSold = productStats.reduce((sum, item) => sum + item.qty, 0);
+
+      return {
+        totalRevenue: revenue,
+        totalOrders: ordersCount,
+        totalProductsSold,
+        salesByDate,
+        salesByProduct: productStats,
+        salesByCategory: categoryStats
+      };
+
+    } catch (error) {
+      console.error('Error in getSalesReport:', error);
+      throw { status: 500, message: 'Error generating sales report data' };
     }
   }
 }

@@ -1,5 +1,6 @@
 const { verifyToken } = require('../utils/jwt');
 const { verifyAdminToken } = require('../utils/adminJwt');
+const User = require('../models/UserModel');
 
 const authenticateUser = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -8,18 +9,36 @@ const authenticateUser = async (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
+  let decoded;
+  let tokenType = 'user';
+  
+  // Try to verify as user token first
   try {
-    const decoded = verifyToken(token);
-    req.user = decoded; 
+    decoded = verifyToken(token);
+    tokenType = 'user';
+  } catch (userError) {
+    // If user token fails, try admin token
+    try {
+      decoded = verifyAdminToken(token);
+      tokenType = 'admin';
+    } catch (adminError) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+  }
+  
+  try {
+    req.user = decoded;
     req.userId = decoded.id || decoded._id || decoded.userId;
+    req.tokenType = tokenType;
     
-    // Check if user is still active (not banned mid-session)
-    const User = require('../models/UserModel');
-    const user = await User.findById(req.userId).select('status banReason');
-    if (!user || user.status === 'banned') {
-      return res.status(403).json({ 
-        message: `Your account has been banned. Reason: ${user?.banReason || 'Violation of terms'}. Please contact support.`
-      });
+    // Only check ban status for regular users (not admins)
+    if (tokenType === 'user') {
+      const user = await User.findById(req.userId).select('status banReason');
+      if (!user || user.status === 'banned') {
+        return res.status(403).json({ 
+          message: `Your account has been banned. Reason: ${user?.banReason || 'Violation of terms'}. Please contact support.`
+        });
+      }
     }
     
     next();
@@ -52,5 +71,7 @@ const authenticateAdmin = (req, res, next) => {
 
 module.exports = {
   authenticateUser,
-  authenticateAdmin
+  authenticateAdmin,
+  protect: authenticateUser,
+  admin: authenticateAdmin
 };

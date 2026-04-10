@@ -20,6 +20,10 @@ const cartSchema = new mongoose.Schema({
         required: true,
         min: 1,
         default: 1
+      },
+      selectedVariant: {
+        name: { type: String },
+        price: { type: Number }
       }
     }
   ]

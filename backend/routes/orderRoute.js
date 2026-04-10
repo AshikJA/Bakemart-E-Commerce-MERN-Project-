@@ -10,7 +10,6 @@ router.post('/create', authenticateUser, searchLimiter, OrderController.createOr
 router.post('/verify-payment', authenticateUser, searchLimiter, OrderController.verifyPayment);
 router.get('/my-orders', authenticateUser, searchLimiter, OrderController.getUserOrders);
 router.post('/:orderId/cancel', authenticateUser, searchLimiter, OrderController.cancelOrder);
-router.post('/:orderId/return', authenticateUser, searchLimiter, OrderController.requestReturn);
 router.post('/:id/fail', authenticateUser, searchLimiter, OrderController.failOrder);
 
 // Admin Routes

@@ -6,7 +6,6 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        console.log('--- Multer Debug: Processing Upload ---');
         cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {

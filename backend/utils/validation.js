@@ -3,7 +3,8 @@ const Joi = require('joi');
 const registerUserSchema = Joi.object({
   name: Joi.string().min(2).max(50).trim().required(),
   email: Joi.string().email().trim().required(),
-  password: Joi.string().min(6).required()
+  password: Joi.string().min(6).required(),
+  confirmPassword: Joi.string().min(6).required()
 });
 
 const loginUserSchema = Joi.object({
@@ -28,8 +29,16 @@ const addProductSchema = Joi.object({
   category: Joi.string().required(),
   stock: Joi.number().required(),
   image: Joi.string().optional(),
-  images: Joi.array().items(Joi.string()).min(1).required(),
-  weight: Joi.number().allow('', null).optional()  
+  images: Joi.array().items(Joi.string()).optional(),
+  weight: Joi.number().allow('', null).optional(),
+  variantType: Joi.string().valid('weight', 'size', 'flavor', 'none').optional(),
+  variants: Joi.array().items(Joi.object({
+    name: Joi.string().optional(),
+    price: Joi.number().optional(),
+    stock: Joi.number().optional(),
+    sku: Joi.string().allow('', null).optional(),
+    isDefault: Joi.boolean().optional()
+  })).optional()
 });
 
 const addCategorySchema = Joi.object({

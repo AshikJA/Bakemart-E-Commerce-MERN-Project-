@@ -5,16 +5,19 @@ import Loading from '../components/Loading'
 import ProtectedRoute from '../components/ProtectedRoute'
 import PublicRoute from '../components/PublicRoute' 
 
-const AdminLogin = lazy( () => import( '../pages/AdminLogin'))
-const AdminDasboard = lazy( () => import( '../pages/AdminDasboard'))
-const AddCategory = lazy( () => import( '../pages/AddCategory'))
-const AdminOrders = lazy( () => import( '../pages/AdminOrders'))
-const AddProducts = lazy( () => import( '../pages/AddProducts'))
-const NotFound = lazy( () => import( '../pages/404'))
-const AddCoupon = lazy( () => import( '../pages/AddCoupon'))
-const AdminProductList = lazy( () => import( '../pages/AdminProductList'))
-const AdminUsersLists = lazy( () => import( '../pages/AdminUsersLists'))
-const RevenueOverview = lazy( () => import( '../pages/RevenueOverview'))  
+const AdminLogin = lazy( () => import( '../pages/admin/AdminLogin'))
+const AdminDasboard = lazy( () => import( '../pages/admin/AdminDasboard'))
+const AddCategory = lazy( () => import( '../pages/admin/AddCategory'))
+const AdminOrders = lazy( () => import( '../pages/admin/AdminOrders'))
+const AddProducts = lazy( () => import( '../pages/admin/AddProducts'))
+const NotFound = lazy( () => import( '../pages/error/404'))
+const AddCoupon = lazy( () => import( '../pages/admin/AddCoupon'))
+const AdminProductList = lazy( () => import( '../pages/admin/AdminProductList'))
+const AdminUsersLists = lazy( () => import( '../pages/admin/AdminUsersLists'))
+const RevenueOverview = lazy( () => import( '../pages/admin/RevenueOverview'))  
+const SalesReport = lazy( () => import( '../pages/admin/SalesReport'))
+const ReturnRequests = lazy( () => import( '../pages/admin/ReturnRequests'))
+const RefundsList = lazy( () => import( '../pages/admin/RefundsList'))
 
 function AdminRoutes() {
   return (
@@ -30,6 +33,9 @@ function AdminRoutes() {
             <Route path="admin-product-list" element={<ProtectedRoute requireAdmin={true}><AdminProductList /></ProtectedRoute>} />
             <Route path="admin-user-list" element={<ProtectedRoute requireAdmin={true}><AdminUsersLists /></ProtectedRoute>} /> 
             <Route path="revenue" element={<ProtectedRoute requireAdmin={true}><RevenueOverview /></ProtectedRoute>} />
+            <Route path="sales-report" element={<ProtectedRoute requireAdmin={true}><SalesReport /></ProtectedRoute>} />
+            <Route path="returns" element={<ProtectedRoute requireAdmin={true}><ReturnRequests /></ProtectedRoute>} />
+            <Route path="refunds" element={<ProtectedRoute requireAdmin={true}><RefundsList /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
 
         </Routes>

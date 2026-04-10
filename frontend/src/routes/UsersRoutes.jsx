@@ -7,20 +7,20 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer' 
 import Loading from '../components/Loading' 
 
-const Home = lazy( () => import( '../pages/Home'))
-const Login = lazy( () => import( '../pages/Login'))
-const Register = lazy( () => import( '../pages/Register'))
-const Profile = lazy( () => import( '../pages/Profile'))
-const NotFound = lazy( () => import( '../pages/404'))
-const Cart = lazy( () => import( '../pages/Cart'))
-const ForgotPassword = lazy( () => import( '../pages/ForgetPassword'))
-const ResetPassword = lazy( () => import( '../pages/ResetPassword'))
-const ProductDetails = lazy( () => import( '../pages/ProductDetails'))
-const Checkout = lazy( () => import( '../pages/Checkout'))
-const OrderConfirmation = lazy( () => import( '../pages/OrderConfirmation')) 
-const ViewOrders = lazy( () => import( '../pages/ViewOrders'))  
-const Wallet = lazy( () => import( '../pages/Wallet'))
-const VerifyOtp = lazy( () => import( '../pages/VerifyOtp'))
+const Home = lazy( () => import( '../pages/user/Home'))
+const Login = lazy( () => import( '../pages/user/Login'))
+const Register = lazy( () => import( '../pages/user/Register'))
+const Profile = lazy( () => import( '../pages/user/Profile'))
+const NotFound = lazy( () => import( '../pages/error/404'))
+const Cart = lazy( () => import( '../pages/user/Cart'))
+const ForgotPassword = lazy( () => import( '../pages/user/ForgetPassword'))
+const ResetPassword = lazy( () => import( '../pages/user/ResetPassword'))
+const ProductDetails = lazy( () => import( '../pages/user/ProductDetails'))
+const Checkout = lazy( () => import( '../pages/user/Checkout'))
+const OrderConfirmation = lazy( () => import( '../pages/user/OrderConfirmation')) 
+const ViewOrders = lazy( () => import( '../pages/user/ViewOrders'))  
+const Wallet = lazy( () => import( '../pages/user/Wallet'))
+const VerifyOtp = lazy( () => import( '../pages/user/VerifyOtp'))
 
 function UsersRoutes() {
   return (

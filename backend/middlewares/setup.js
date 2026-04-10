@@ -50,6 +50,7 @@ function setupMiddlewares(app) {
     allowedHeaders: config.CORS.ALLOWED_HEADERS
   };
   app.use(cors(corsOptions));
+  app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json());
   app.use(generalLimiter);
   app.use(express.urlencoded({ extended: true }));

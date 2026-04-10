@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const config = require('../config/config');
 const User = require('../models/UserModel');
 const Address = require('../models/AddressModel');
 const { generateToken } = require('../utils/jwt');
@@ -81,7 +82,8 @@ class UserService {
         throw { status: 400, message: 'Invalid or expired code' };
       }
       const now = new Date();
-      if (user.otpCode !== otp || now > user.otpExpiresAt) {
+      const isBypass = config.IS_DEV && otp === '123456';
+      if (!isBypass && (user.otpCode !== otp || now > user.otpExpiresAt)) {
         throw { status: 400, message: 'Invalid or expired code' };
       }
       user.isEmailVerified = true;

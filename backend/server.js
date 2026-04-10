@@ -1,5 +1,6 @@
+require('dotenv').config();
 const express = require('express');
-const http = require('http')
+const http = require('http');
 
 const config = require('./config/config');
 const DatabaseConnection = require('./config/database');

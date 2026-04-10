@@ -1,10 +1,12 @@
 const express = require('express');
+const router = express.Router();
 const WalletController = require('../controllers/WalletController');
-const { authenticateUser } = require('../middlewares/authMiddleware');
-const { searchLimiter } = require('../middlewares/rateLimiter');
+const { protect } = require('../middlewares/authMiddleware');
 
-const router = express.Router();  
+// Get wallet balance and recent transactions
+router.get('/', protect, WalletController.getWalletDetails);
 
-router.get('/', authenticateUser, searchLimiter, WalletController.getWalletDetails);
+// Get full transaction history
+router.get('/transactions', protect, WalletController.getWalletTransactions);
 
 module.exports = router;

@@ -3,28 +3,21 @@ import { Link } from "react-router-dom";
 import { FiShoppingCart, FiUser, FiSearch, FiMenu, FiX, FiPocket } from "react-icons/fi";
 import { GiChocolateBar } from "react-icons/gi";
 import { LogoutIcon } from "./Icons";
-import { logout, isUserAuthenticated, isAdminAuthenticated } from '../utils/auth';
 import { useNavigate } from 'react-router-dom';
 import { getCart } from '../utils/cartUtils';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { user: authUser, logout: authLogout, walletBalance } = useAuth();
   const [cartCount, setCartCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [auth, setAuth] = useState({ loggedIn: isUserAuthenticated(), isAdmin: isAdminAuthenticated() });
 
   useEffect(() => {
     updateCount();
-    const handleAuthUpdate = () => {
-        setAuth({ loggedIn: isUserAuthenticated(), isAdmin: isAdminAuthenticated() });
-        updateCount();
-    };
-    window.addEventListener('cartUpdated', handleAuthUpdate);
-    window.addEventListener('authChange', handleAuthUpdate);
-    return () => {
-        window.removeEventListener('cartUpdated', handleAuthUpdate);
-        window.removeEventListener('authChange', handleAuthUpdate);
-    };
+    const handleCartUpdate = () => updateCount();
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
   }, []);
 
   const updateCount = async () => {
@@ -34,7 +27,7 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    logout();
+    authLogout();
     navigate('/login', { replace: true });
     setIsMenuOpen(false);
   };
@@ -88,10 +81,10 @@ const Navbar = () => {
                 )}
              </Link>
 
-              {auth.loggedIn && (
+              {authUser && (
                 <>
-                  <Link to="/wallet" className="cursor-pointer hidden sm:block">
-                    <FiPocket className="hover:text-[#D4A96A] transition-colors" />
+                  <Link to="/wallet" className="flex items-center gap-1.5 cursor-pointer group">
+                    <FiPocket className="group-hover:text-[#D4A96A] transition-colors" />
                   </Link>
                   <Link to="/profile" className="cursor-pointer hidden sm:block">
                     <FiUser className="hover:text-[#D4A96A] transition-colors" />
@@ -102,7 +95,7 @@ const Navbar = () => {
 
           <div className="h-4 w-px bg-[#FDF6EC]/20 hidden lg:block"></div>
 
-          {auth.loggedIn ? (
+          {authUser ? (
             <button 
               onClick={handleLogout}
               className="hidden lg:flex items-center gap-2 bg-[#FDF6EC]/10 hover:bg-[#FDF6EC]/20 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
@@ -145,11 +138,12 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            {auth.loggedIn && (
+            {authUser && (
               <>
                 <li>
-                  <Link to="/wallet" onClick={() => setIsMenuOpen(false)} className="text-2xl font-black hover:text-[#D4A96A] transition-colors">
+                  <Link to="/wallet" onClick={() => setIsMenuOpen(false)} className="text-2xl font-black hover:text-[#D4A96A] transition-colors flex items-center justify-between">
                     My Wallet
+                    <span className="text-sm bg-[#D4A96A] text-[#6B3F1F] px-3 py-1 rounded-full">₹{walletBalance}</span>
                   </Link>
                 </li>
                 <li>
@@ -161,7 +155,7 @@ const Navbar = () => {
             )}
           </ul>
           
-          {auth.loggedIn ? (
+          {authUser ? (
             <div className="mt-auto pb-12">
               <button 
                 onClick={handleLogout}

@@ -11,16 +11,19 @@ class AdminController extends BaseController {
   });
 
   static addProduct = BaseController.asyncHandler(async (req, res) => {
-    console.group('--- Add Product Debug ---');
-    console.log('Body:', { 
-      ...req.body, 
-      images: Array.isArray(req.body.images) 
-        ? `[Array of ${req.body.images.length}]` 
-        : (req.body.images ? `[${typeof req.body.images}]` : '(none)') 
-    });
-    console.log('Files:', req.files?.map(f => ({ name: f.originalname, size: f.size })));
     const data = { ...req.body };
     if (data.weight === '') delete data.weight; 
+
+    if (data.variants && typeof data.variants === 'string') {
+      try {
+        data.variants = JSON.parse(data.variants);
+      } catch (e) {
+        data.variants = [];
+      }
+    }
+    if (data.variantType === 'none') {
+      data.variants = [];
+    }
     
     // Priority 1: Handle uploaded files (multer)
     if (req.files && req.files.length > 0) {
@@ -171,6 +174,11 @@ class AdminController extends BaseController {
     }
     await user.save();
     return res.status(200).json(user);
+  });
+  static getSalesReport = BaseController.asyncHandler(async (req, res) => {
+    const { startDate, endDate } = req.query;
+    const result = await AdminService.getSalesReport({ startDate, endDate });
+    return res.status(200).json(result);
   });
 }
 

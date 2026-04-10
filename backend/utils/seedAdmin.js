@@ -11,9 +11,11 @@ async function seedDefaultAdmin() {
       return;
     }
 
-    const existing = await Admin.findOne({ email: email.trim().toLowerCase() });
+    const existing = await Admin.findOne({ email: email.trim().toLowerCase() }).select('+password');
     if (existing) {
-      console.log('Default admin already exists');
+      console.log('Default admin already exists: updating password to match .env');
+      existing.password = password;
+      await existing.save();
       return;
     }
 

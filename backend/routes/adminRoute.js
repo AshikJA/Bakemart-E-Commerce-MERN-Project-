@@ -20,6 +20,7 @@ router.patch('/toggle-user-ban/:id', authenticateAdmin, AdminController.toggleUs
 
 
 router.get('/dashboard-data', authenticateAdmin, AdminController.getDashboardData);  
+router.get('/reports/sales', authenticateAdmin, AdminController.getSalesReport);
 
 module.exports = router;
 

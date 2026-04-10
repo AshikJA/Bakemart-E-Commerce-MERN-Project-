@@ -1,59 +1,33 @@
 const BaseController = require('./BaseController');
-const Product = require('../models/ProductModel');
+const ProductService = require('../services/ProductService');
 
 class ProductController extends BaseController {
   
   static getAllProducts = BaseController.asyncHandler(async (req, res) => {
-    const { category, search, minPrice, maxPrice, sort = '-createdAt' } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
-    const skip = (page - 1) * limit;
-
-    let query = {};
-    
-    if (category) {
-      query.category = category;
-    }
-    
-    if (search) {
-      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.name = { $regex: escapedSearch, $options: 'i' };
-    }
-
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = parseFloat(minPrice);
-      if (maxPrice) query.price.$lte = parseFloat(maxPrice);
-    }
-
-    const [products, total] = await Promise.all([
-      Product.find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit),
-      Product.countDocuments(query)
-    ]);
-
-    return res.status(200).json({
-      products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    const result = await ProductService.getAllProducts(req, res);
+    return res.status(200).json(result);
   });
 
   static getProductById = BaseController.asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const product = await Product.findById(id);
-    
-    if (!product) {
-      throw { status: 404, message: 'Product not found' };
-    }
-    
-    return res.status(200).json(product);
+    const result = await ProductService.getProductById(req.params.id);
+    return res.status(200).json(result);
+  });
+
+  static createProductReview = BaseController.asyncHandler(async (req, res) => {
+    const { rating, comment } = req.body;
+    const result = await ProductService.createProductReview(req.params.id, req.userId, rating, comment);
+    return res.status(201).json(result);
+  });
+
+  static updateProductReview = BaseController.asyncHandler(async (req, res) => {
+    const { rating, comment } = req.body;
+    const result = await ProductService.updateProductReview(req.params.id, req.params.reviewId, req.userId, rating, comment);
+    return res.status(200).json(result);
+  });
+
+  static deleteProductReview = BaseController.asyncHandler(async (req, res) => {
+    const result = await ProductService.deleteProductReview(req.params.id, req.params.reviewId, req.userId);
+    return res.status(200).json(result);
   });
 }
 
