@@ -160,6 +160,90 @@ class AdminService {
       throw { status: 500, message: 'Error fetching dashboard data' };
     }
   }
+
+  static async getAllProducts({ page: p, limit: l }) {
+    const page = parseInt(p) || 1;
+    const limit = parseInt(l) || 10;
+    const skip = (page - 1) * limit;
+    
+    const [products, total] = await Promise.all([
+          Product.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+          Product.countDocuments()
+        ]);
+    
+    return {
+          products,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          }
+        };
+  }
+
+  static async toggleUserBan(id, reason, adminId) {
+    try {
+      const user = await User.findById(id);
+      if (!user) throw { status: 404, message: 'User not found' };
+      
+      if (user.status === 'active') {
+        user.status = 'banned';
+        user.banReason = reason || 'Banned by admin';
+        user.bannedAt = new Date();
+        user.bannedBy = adminId;
+      } else {
+        user.status = 'active';
+        user.banReason = null;
+        user.bannedAt = null;
+        user.bannedBy = null;
+      }
+      await user.save();
+      return user;
+    } catch (error) {
+      console.error('Error toggling user ban:', error);
+      throw error.status ? error : { status: 500, message: 'Error toggling user ban' };
+    }
+  }
+
+  static async getAllUsers({ page: p, limit: l, search: s }) {
+    const page = parseInt(p) || 1;
+    const limit = parseInt(l) || 10;
+    const skip = (page - 1) * limit;
+    const search = s;
+
+    let query = { role: 'user' };
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.$or = [
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } }
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('-password'),
+      User.countDocuments(query)
+    ]);
+    
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    };
+  }
+
   static async getSalesReport({ startDate, endDate }) {
     try {
       const matchStage = {

@@ -245,6 +245,7 @@ function AddProducts() {
               {variants.map((variant, idx) => (
                 <div key={idx} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
                   <div className="flex-1 min-w-[100px]">
+                  <label className="block text-sm font-semibold text-gray-700">Variant Name</label>
                     <input
                       type="text"
                       value={variant.name}
@@ -254,6 +255,7 @@ function AddProducts() {
                     />
                   </div>
                   <div className="w-24">
+                    <label className="block text-sm font-semibold text-gray-700">Price</label>
                     <input
                       type="number"
                       value={variant.price}
@@ -263,6 +265,7 @@ function AddProducts() {
                     />
                   </div>
                   <div className="w-24">
+                    <label className="block text-sm font-semibold text-gray-700">Stock</label>
                     <input
                       type="number"
                       value={variant.stock}

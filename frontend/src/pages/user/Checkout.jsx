@@ -3,8 +3,10 @@ import api from '../../api/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getCart, clearCart } from '../../utils/cartUtils';
-import { FiCheckCircle, FiPlus, FiArrowLeft, FiEdit2, FiX, FiPocket } from 'react-icons/fi';
+import { FiCheckCircle, FiPlus, FiArrowLeft, FiEdit2, FiX, FiPocket, FiLoader } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
+import useDebounce from '../../hooks/useDebounce';
+import usePincode from '../../hooks/usePincode';
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -13,9 +15,9 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newAddress, setNewAddress] = useState({ name: '', phoneNumber: '', street: '', city: '', state: '', pincode: '' });
+  const [newAddress, setNewAddress] = useState({ name: '', phoneNumber: '', street: '', city: '', state: '', pincode: '', area: '', houseNo: '', district: '' });
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editAddress, setEditAddress] = useState({ index: null, address: { name: '', phoneNumber: '', street: '', city: '', state: '', pincode: '' } });
+  const [editAddress, setEditAddress] = useState({ index: null, address: { name: '', phoneNumber: '', street: '', city: '', state: '', pincode: '', area: '', houseNo: '', district: '' } });
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [upiId, setUpiId] = useState('');
   const [couponCode, setCouponCode] = useState('');
@@ -24,6 +26,17 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [useWallet, setUseWallet] = useState(false);
   const { walletBalance, refreshWallet } = useAuth();
+  
+  // Pincode lookup using custom hook
+  const [showPostOfficeDropdown, setShowPostOfficeDropdown] = useState(false);
+  const [editShowPostOfficeDropdown, setEditShowPostOfficeDropdown] = useState(false);
+  const [pincodeInput, setPincodeInput] = useState('');
+  const [editPincodeInput, setEditPincodeInput] = useState('');
+  const debouncedPincode = useDebounce(pincodeInput, 600);
+  const debouncedEditPincode = useDebounce(editPincodeInput, 600);
+  
+  const { postOffices, loading: pincodeLoading, fetchPincode } = usePincode();
+  const { postOffices: editPostOffices, loading: editPincodeLoading, fetchPincode: fetchEditPincode } = usePincode();
 
   useEffect(() => {
     const fetchCartItems = async () => {
@@ -75,6 +88,90 @@ export default function Checkout() {
     }
   };
 
+  // Handle debounced pincode lookup for Add Address
+  useEffect(() => {
+    if (debouncedPincode && debouncedPincode.length === 6 && /^\d+$/.test(debouncedPincode)) {
+      fetchPincode(debouncedPincode).then(office => {
+        if (office) {
+          setNewAddress(prev => ({
+            ...prev,
+            city: office.Block || '',
+            district: office.District || '',
+            state: office.State || '',
+          }));
+        }
+      });
+    }
+  }, [debouncedPincode, fetchPincode]);
+
+  // Handle debounced pincode lookup for Edit Address
+  useEffect(() => {
+    if (debouncedEditPincode && debouncedEditPincode.length === 6 && /^\d+$/.test(debouncedEditPincode)) {
+      fetchEditPincode(debouncedEditPincode).then(office => {
+        if (office) {
+          setEditAddress(prev => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              city: office.Block || '',
+              district: office.District || '',
+              state: office.State || '',
+            }
+          }));
+        }
+      });
+    }
+  }, [debouncedEditPincode, fetchEditPincode]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.post-office-dropdown-add')) {
+        setShowPostOfficeDropdown(false);
+      }
+      if (!e.target.closest('.post-office-dropdown-edit')) {
+        setEditShowPostOfficeDropdown(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const handlePincodeChange = (value, isEdit = false) => {
+    if (isEdit) {
+      setEditAddress(prev => ({
+        ...prev,
+        address: { ...prev.address, pincode: value, area: '' }
+      }));
+      setEditShowPostOfficeDropdown(false);
+      setEditPincodeInput(value);
+    } else {
+      setNewAddress(prev => ({
+        ...prev,
+        pincode: value,
+        area: ''
+      }));
+      setShowPostOfficeDropdown(false);
+      setPincodeInput(value);
+    }
+  };
+
+  const handleAreaSelect = (area, isEdit = false) => {
+    if (isEdit) {
+      setEditAddress(prev => ({
+        ...prev,
+        address: { ...prev.address, area }
+      }));
+      setEditShowPostOfficeDropdown(false);
+    } else {
+      setNewAddress(prev => ({
+        ...prev,
+        area
+      }));
+      setShowPostOfficeDropdown(false);
+    }
+  };
+
   const handleAddAddress = async (e) => {
     e.preventDefault();
     try {
@@ -90,6 +187,7 @@ export default function Checkout() {
 
   const handleEditAddress = (index) => {
     setEditAddress({ index, address: { ...addresses[index] } });
+    setEditPincodeInput(addresses[index].pincode || '');
     setShowEditModal(true);
   };
 
@@ -346,7 +444,9 @@ export default function Checkout() {
                   <div className="flex justify-between items-start">
                     <div className="min-w-0">
                       <h3 className="font-bold text-[#6B3F1F] truncate">{addr.name}</h3>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">{addr.street}, {addr.city}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">{addr.houseNo}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">{addr.area},{addr.city}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">{addr.district}</p>
                       <p className="text-xs sm:text-sm text-gray-600">{addr.state} - {addr.pincode}</p>
                       <p className="text-xs sm:text-sm text-gray-600 mt-2">📞 {addr.phoneNumber}</p>
                     </div>
@@ -378,11 +478,51 @@ export default function Checkout() {
                   <input required type="text" placeholder="Full Name" className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.name} onChange={e => setNewAddress({...newAddress, name: e.target.value})} />
                   <input required type="text" placeholder="Phone Number" className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.phoneNumber} onChange={e => setNewAddress({...newAddress, phoneNumber: e.target.value})} />
                 </div>
-                <input required type="text" placeholder="Street Address" className="w-full p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} />
+                <input required type="text" placeholder="House No/Building Name" className="w-full p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.houseNo} onChange={e => setNewAddress({...newAddress, houseNo: e.target.value})} />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="relative">
+                    <input 
+                      required 
+                      type="text" 
+                      placeholder="Pincode" 
+                      className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm w-full" 
+                      value={newAddress.pincode} 
+                      onChange={e => handlePincodeChange(e.target.value, false)}
+                      maxLength={6}
+                    />
+                    {pincodeLoading && (
+                      <FiLoader className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[#D4A96A]" size={16} />
+                    )}
+                  </div>
+                  <div className="relative post-office-dropdown-add">
+                    <input 
+                      type="text" 
+                      placeholder="Area (Select Post Office)" 
+                      className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm w-full" 
+                      value={newAddress.area} 
+                      onChange={e => {
+                        setNewAddress({...newAddress, area: e.target.value});
+                        if (postOffices.length > 0) setShowPostOfficeDropdown(true);
+                      }}
+                      onFocus={() => postOffices.length > 0 && setShowPostOfficeDropdown(true)}
+                    />
+                    {showPostOfficeDropdown && postOffices.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {postOffices.map((po, idx) => (
+                          <div 
+                            key={idx}
+                            className="p-2 hover:bg-[#FDF6EC] cursor-pointer text-sm"
+                            onClick={() => handleAreaSelect(po.Name, false)}
+                          >
+                            {po.Name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <input required type="text" placeholder="City" className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.city} onChange={e => setNewAddress({...newAddress, city: e.target.value})} />
+                  <input required type="text" placeholder="District" className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.district} onChange={e => setNewAddress({...newAddress, district: e.target.value})} />
                   <input required type="text" placeholder="State" className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} />
-                  <input required type="text" placeholder="Pincode" className="p-3 rounded-xl border border-white focus:border-[#D4A96A] outline-none text-sm" value={newAddress.pincode} onChange={e => setNewAddress({...newAddress, pincode: e.target.value})} />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
                   <button type="submit" className="bg-[#6B3F1F] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#A0522D] transition-colors">Save Address</button>
@@ -636,6 +776,46 @@ export default function Checkout() {
               onChange={e => setEditAddress({...editAddress, address: {...editAddress.address, street: e.target.value}})} 
             />
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="relative">
+                <input 
+                  required 
+                  type="text" 
+                  placeholder="Pincode" 
+                  className="p-3 rounded-xl border border-gray-200 focus:border-[#D4A96A] outline-none text-sm w-full" 
+                  value={editAddress.address.pincode} 
+                  onChange={e => handlePincodeChange(e.target.value, true)}
+                  maxLength={6}
+                />
+                {editPincodeLoading && (
+                  <FiLoader className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[#6B3F1F]" size={16} />
+                )}
+              </div>
+              <div className="relative post-office-dropdown-edit">
+                <input 
+                  type="text" 
+                  placeholder="Area (Select Post Office)" 
+                  className="p-3 rounded-xl border border-gray-200 focus:border-[#D4A96A] outline-none text-sm w-full" 
+                  value={editAddress.address.area || ''} 
+                  onChange={e => {
+                    setEditAddress({...editAddress, address: {...editAddress.address, area: e.target.value}});
+                    if (editPostOffices.length > 0) setEditShowPostOfficeDropdown(true);
+                  }}
+                  onFocus={() => editPostOffices.length > 0 && setEditShowPostOfficeDropdown(true)}
+                />
+                {editShowPostOfficeDropdown && editPostOffices.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    {editPostOffices.map((po, idx) => (
+                      <div 
+                        key={idx}
+                        className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        onClick={() => handleAreaSelect(po.Name, true)}
+                      >
+                        {po.Name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <input 
                 required 
                 type="text" 
@@ -651,14 +831,6 @@ export default function Checkout() {
                 className="p-3 rounded-xl border border-gray-200 focus:border-[#D4A96A] outline-none text-sm" 
                 value={editAddress.address.state} 
                 onChange={e => setEditAddress({...editAddress, address: {...editAddress.address, state: e.target.value}})} 
-              />
-              <input 
-                required 
-                type="text" 
-                placeholder="Pincode" 
-                className="p-3 rounded-xl border border-gray-200 focus:border-[#D4A96A] outline-none text-sm" 
-                value={editAddress.address.pincode} 
-                onChange={e => setEditAddress({...editAddress, address: {...editAddress.address, pincode: e.target.value}})} 
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-4 pt-2">

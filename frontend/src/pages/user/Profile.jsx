@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';  
-import { FiUser, FiShoppingBag, FiCreditCard, FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiUser, FiShoppingBag, FiCreditCard, FiPlus, FiEdit2, FiTrash2, FiLoader } from 'react-icons/fi';
+import useDebounce from '../../hooks/useDebounce';
+import usePincode from '../../hooks/usePincode';
 
 function Profile() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -18,12 +20,33 @@ function Profile() {
     city: '',
     state: '',
     pincode: '',
+    area: '',
+    houseNo: '',
+    district: '',
     isDefault: false
   });
   const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
   const [showdeleteAddressModal, setShowdeleteAddressModal] = useState(false);
   const [emailOtp, setEmailOtp] = useState('');
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
+  const [addressToDelete, setAddressToDelete] = useState(null);
+
+  // Pincode lookup using custom hooks
+  const [pincodeInput, setPincodeInput] = useState('');
+  const [showPostOfficeDropdown, setShowPostOfficeDropdown] = useState(false);
+  const debouncedPincode = useDebounce(pincodeInput, 600);
+  const { postOffices, loading: pincodeLoading, fetchPincode } = usePincode();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.post-office-dropdown')) {
+        setShowPostOfficeDropdown(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -44,6 +67,33 @@ function Profile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle debounced pincode lookup
+  useEffect(() => {
+    if (debouncedPincode && debouncedPincode.length === 6 && /^\d+$/.test(debouncedPincode)) {
+      fetchPincode(debouncedPincode).then(office => {
+        if (office) {
+          setAddressForm(prev => ({
+            ...prev,
+            city: office.Block || '',
+            district: office.District || '',
+            state: office.State || '',
+          }));
+        }
+      });
+    }
+  }, [debouncedPincode, fetchPincode]);
+
+  const handlePincodeChange = (value) => {
+    setAddressForm(prev => ({ ...prev, pincode: value, area: '' }));
+    setShowPostOfficeDropdown(false);
+    setPincodeInput(value);
+  };
+
+  const handleAreaSelect = (area) => {
+    setAddressForm(prev => ({ ...prev, area }));
+    setShowPostOfficeDropdown(false);
   };
 
   const handleUpdateProfile = async (e) => {
@@ -96,8 +146,6 @@ function Profile() {
     }
   };
 
-  const [addressToDelete, setAddressToDelete] = useState(null);
-
   const confirmDeleteAddress = async (e) => {
     e.preventDefault();
     if (!addressToDelete) return;
@@ -119,12 +167,15 @@ function Profile() {
     setAddressForm({
       name: addr.name,
       phoneNumber: addr.phoneNumber,
-      street: addr.street,
+      houseNo: addr.houseNo,
+      area: addr.area,
       city: addr.city,
+      district: addr.district || '',
       state: addr.state,
       pincode: addr.pincode,
       isDefault: addr.isDefault
     });
+    setPincodeInput(addr.pincode || '');
     setShowAddressForm(true);
   };
 
@@ -202,7 +253,7 @@ function Profile() {
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-3xl font-black text-[#6B3F1F] tracking-tight">Saved Addresses</h3>
                   <button 
-                    onClick={() => { setShowAddressForm(true); setEditingAddress(null); setAddressForm({name:'',phoneNumber:'',street:'',city:'',state:'',pincode:'',isDefault:false})}}
+                    onClick={() => { setShowAddressForm(true); setEditingAddress(null); setAddressForm({name:'',phoneNumber:'',houseNo:'',area:'',city:'',district:'',state:'',pincode:'',isDefault:false}); setPincodeInput(''); }}
                     className="bg-[#A0522D] text-white px-8 py-3 rounded-2xl font-black text-xl shadow-lg hover:bg-[#6B3F1F] transition-all active:scale-95"
                   >
                     + Add New
@@ -219,7 +270,9 @@ function Profile() {
                         </div>
                         <p className="text-lg text-[#A0522D] font-bold">{addr.phoneNumber}</p>
                         <p className="text-lg text-gray-600 leading-relaxed italic">
-                          {addr.street}, {addr.city},<br/>
+                          {addr.houseNo}<br/>
+                          {addr.area}<br/>
+                          {addr.city}, {addr.district}<br/>
                           {addr.state} - {addr.pincode}
                         </p>
                       </div>
@@ -281,27 +334,6 @@ function Profile() {
                   <h3 className="text-2xl font-black text-[#6B3F1F]">Recent Activity</h3>
                   <Link to="/wallet" className="text-[#D4A96A] font-bold text-sm hover:underline">View All</Link>
                 </div>
-                
-                {wallet.transactions.length === 0 ? (
-                  <p className="text-center text-gray-400 py-10 italic">No transactions found.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {wallet.transactions.slice(0, 3).map((tx) => (
-                      <div key={tx._id} className="flex items-center justify-between p-5 bg-[#FDF6EC] rounded-2xl border border-[#D4A96A]/10">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-2 h-2 rounded-full ${tx.type === 'credit' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <div>
-                            <h4 className="font-bold text-[#6B3F1F] text-sm">{tx.description}</h4>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <div className={`font-black ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'credit' ? '+' : '-'}₹{tx.amount}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
                 
                 <Link to="/wallet">
                   <button className="w-full py-4 mt-6 bg-[#6B3F1F] text-white text-xl font-black rounded-2xl shadow-xl hover:bg-[#A0522D] transition-all active:scale-95">
@@ -368,22 +400,63 @@ function Profile() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">Street / Locality</label>
-                <textarea required rows={2} value={addressForm.street} onChange={e=>setAddressForm({...addressForm, street: e.target.value})} className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none resize-none" />
+                <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">House No/Building Name</label>
+                <textarea required rows={2} value={addressForm.houseNo} onChange={e=>setAddressForm({...addressForm, houseNo: e.target.value})} className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-5">
+                <div className="relative space-y-1">
+                  <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">Pincode</label>
+                  <div className="relative">
+                    <input 
+                      required 
+                      value={addressForm.pincode} 
+                      onChange={e => handlePincodeChange(e.target.value)}
+                      maxLength={6}
+                      className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none" 
+                    />
+                    {pincodeLoading && (
+                      <FiLoader className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[#6B3F1F]" size={16} />
+                    )}
+                  </div>
+                </div>
+                <div className="relative space-y-1 post-office-dropdown">
+                  <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">Area (Select Post Office)</label>
+                  <input 
+                    required 
+                    value={addressForm.area} 
+                    onChange={e => {
+                      setAddressForm({...addressForm, area: e.target.value});
+                      if (postOffices.length > 0) setShowPostOfficeDropdown(true);
+                    }}
+                    onFocus={() => postOffices.length > 0 && setShowPostOfficeDropdown(true)}
+                    className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none" 
+                  />
+                  {showPostOfficeDropdown && postOffices.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {postOffices.map((po, idx) => (
+                        <div 
+                          key={idx}
+                          className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          onClick={() => handleAreaSelect(po.Name)}
+                        >
+                          {po.Name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-1">
                   <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">City</label>
                   <input required value={addressForm.city} onChange={e=>setAddressForm({...addressForm, city: e.target.value})} className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none" />
                 </div>
                 <div className="space-y-1">
+                  <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">District</label>
+                  <input required value={addressForm.district} onChange={e=>setAddressForm({...addressForm, district: e.target.value})} className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none" />
+                </div>
+                <div className="space-y-1">
                   <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">State</label>
                   <input required value={addressForm.state} onChange={e=>setAddressForm({...addressForm, state: e.target.value})} className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none" />
                 </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-600 ml-1 uppercase tracking-wider">Pincode</label>
-                <input required value={addressForm.pincode} onChange={e=>setAddressForm({...addressForm, pincode: e.target.value})} className="w-full px-5 py-3 rounded-xl bg-gray-100 border-none" />
               </div>
               <div className="flex gap-4 pt-6">
                 <button type="submit" className="flex-1 py-4 bg-[#6B3F1F] text-white font-black rounded-2xl shadow-xl hover:bg-[#A0522D] transition-all">

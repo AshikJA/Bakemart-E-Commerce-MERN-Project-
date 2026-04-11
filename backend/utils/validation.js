@@ -30,7 +30,6 @@ const addProductSchema = Joi.object({
   stock: Joi.number().required(),
   image: Joi.string().optional(),
   images: Joi.array().items(Joi.string()).optional(),
-  weight: Joi.number().allow('', null).optional(),
   variantType: Joi.string().valid('weight', 'size', 'flavor', 'none').optional(),
   variants: Joi.array().items(Joi.object({
     name: Joi.string().optional(),
@@ -53,8 +52,10 @@ const updateProfileSchema = Joi.object({
 const addressSchema = Joi.object({
   name: Joi.string().trim().required(),
   phoneNumber: Joi.string().trim().required(),
-  street: Joi.string().trim().required(),
+  houseNo: Joi.string().trim().required(),
+  area: Joi.string().trim().required(),
   city: Joi.string().trim().required(),
+  district: Joi.string().trim().required(),
   state: Joi.string().trim().required(),
   pincode: Joi.string().trim().required(),
   isDefault: Joi.boolean()

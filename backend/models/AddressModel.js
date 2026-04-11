@@ -17,13 +17,17 @@ const addressSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Phone number is required'],
     },
-    street: {
+    houseNo: {
       type: String,
-      required: [true, 'Street address is required'],
+      required: [true, 'House No/Building Name is required'],
     },
     city: {
       type: String,
       required: [true, 'City is required'],
+    },
+    district: {
+      type: String,
+      required: [true, 'District is required'],
     },
     state: {
       type: String,
@@ -32,6 +36,10 @@ const addressSchema = new mongoose.Schema(
     pincode: {
       type: String,
       required: [true, 'Pincode is required'],
+    },
+    area: {
+      type: String,
+      default: '',
     },
     isDefault: {
       type: Boolean,

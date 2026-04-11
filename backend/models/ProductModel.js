@@ -46,10 +46,10 @@ const ProductSchema = new mongoose.Schema({
       required: [true, 'Stock is required'],
       min: [0, 'Stock must be a non-negative number'],
     },
-    weight: {
-      type: String,
-      required: false,
-    },
+    // weight: {
+    //   type: String,
+    //   required: false,
+    // },
     variantType: {
       type: String,
       enum: ['weight', 'size', 'flavor', 'none'],

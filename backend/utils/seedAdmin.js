@@ -13,7 +13,7 @@ async function seedDefaultAdmin() {
 
     const existing = await Admin.findOne({ email: email.trim().toLowerCase() }).select('+password');
     if (existing) {
-      console.log('Default admin already exists: updating password to match .env');
+      console.log('Default admin already exists ');
       existing.password = password;
       await existing.save();
       return;

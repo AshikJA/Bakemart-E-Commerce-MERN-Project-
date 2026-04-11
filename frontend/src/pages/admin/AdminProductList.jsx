@@ -3,7 +3,7 @@ import api from '../../api/client';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { FiArrowLeft, FiEdit3, FiTrash2, FiX, FiSearch, FiPackage, FiUpload } from 'react-icons/fi';
+import { FiArrowLeft, FiEdit3, FiTrash2, FiX, FiSearch, FiPackage, FiUpload, FiPlus } from 'react-icons/fi';
 
 export default function AdminProductList() {
   const navigate = useNavigate();
@@ -11,17 +11,12 @@ export default function AdminProductList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categories, setCategories] = useState([]);
-
-  // Edit Modal
   const [editModal, setEditModal] = useState({ isOpen: false, product: null });
-  const [editForm, setEditForm] = useState({ name: '', price: '', description: '', category: '', stock: '', weight: '' });
+  const [editForm, setEditForm] = useState({ name: '', price: '', description: '', category: '', stock: '', weight: '', variantType: '', variants: [] });
   const [editLoading, setEditLoading] = useState(false);
   const [newImages, setNewImages] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
-
-  // Delete Confirm Modal
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, product: null });
-
 
   useEffect(() => {
     fetchProducts();
@@ -48,6 +43,13 @@ export default function AdminProductList() {
 
   // Edit
   const openEditModal = (product) => {
+    const existingVariants = product.variants?.map(v => ({
+      name: v.name || '',
+      price: v.price || '',
+      stock: v.stock ?? 0,
+      isDefault: v.isDefault || false
+    })) || [];
+
     setEditForm({
       name: product.name,
       price: product.price,
@@ -55,6 +57,8 @@ export default function AdminProductList() {
       category: product.category,
       stock: product.stock,
       weight: product.weight || '',
+      variantType: product.variantType || 'none',
+      variants: existingVariants,
     });
     setEditModal({ isOpen: true, product });
     setNewImages([]);
@@ -81,17 +85,34 @@ export default function AdminProductList() {
     setNewPreviews(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const submitEdit = async (e) => {
+const submitEdit = async (e) => {
     e.preventDefault();
     setEditLoading(true);
     try {
+      const payload = {
+        name: editForm.name,
+        price: editForm.price,
+        description: editForm.description,
+        category: editForm.category,
+        stock: editForm.stock,
+        weight: editForm.weight || '',
+        variantType: editForm.variantType || '',
+        variants: editForm.variants || [],
+      };
+
       if (newImages.length > 0) {
         const formData = new FormData();
-        Object.entries(editForm).forEach(([key, val]) => formData.append(key, val));
+        Object.entries(payload).forEach(([key, val]) => {
+          if (key === 'variants') {
+            formData.append(key, JSON.stringify(val));
+          } else {
+            formData.append(key, val);
+          }
+        });
         newImages.forEach(img => formData.append('images', img));
         await api.put(`/admin/update-product/${editModal.product._id}`, formData);
       } else {
-        await api.put(`/admin/update-product/${editModal.product._id}`, editForm);
+        await api.put(`/admin/update-product/${editModal.product._id}`, payload);
       }
       toast.success('Product updated successfully!');
       setEditModal({ isOpen: false, product: null });
@@ -172,7 +193,8 @@ export default function AdminProductList() {
                   <th className="px-6 py-5 font-bold">Category</th>
                   <th className="px-6 py-5 font-bold text-right">Price</th>
                   <th className="px-6 py-5 font-bold text-center">Stock</th>
-                  <th className="px-6 py-5 font-bold text-center">Weight</th>
+                  <th className="px-6 py-5 font-bold text-center">Variant Type</th>
+                  <th className="px-6 py-5 font-bold text-center">Variants</th>
                   <th className="px-6 py-5 font-bold text-center">Images</th>
                   <th className="px-6 py-5 font-bold text-center">Actions</th>
                 </tr>
@@ -207,7 +229,8 @@ export default function AdminProductList() {
                           {product.stock}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center text-slate-600 font-medium">{product.weight || '—'}</td>
+                      <td className="px-6 py-4 text-center text-slate-600 font-medium">{product.variantType || '—'}</td>
+                      <td className="px-6 py-4 text-center text-slate-600 font-medium">{product.variants?.map(v => v.name).join(', ') || '—'}</td>
                       <td className="px-6 py-4 text-center text-slate-600 font-medium">{product.images?.length || (product.image ? 1 : 0)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
@@ -239,8 +262,8 @@ export default function AdminProductList() {
       {/* Edit Product Modal */}
       {editModal.isOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl overflow-hidden">
-            <div className="p-6 sm:p-8 flex justify-between items-center bg-slate-50 border-b border-slate-100">
+          <div className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="p-6 sm:p-8 flex justify-between items-center bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
               <div>
                 <h2 className="text-2xl font-black text-slate-800">Edit Product</h2>
                 <p className="text-slate-500 text-sm mt-1">Update the details for <strong>{editModal.product?.name}</strong></p>
@@ -250,69 +273,116 @@ export default function AdminProductList() {
               </button>
             </div>
 
-            <form onSubmit={submitEdit} className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name</label>
+            <form onSubmit={submitEdit} className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="col-span-1 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Product Name</label>
                 <input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" />
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium" placeholder="e.g. Artisanal Espresso Beans" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Price (₹)</label>
+              <div className="col-span-1 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Price (₹)</label>
                 <input type="number" value={editForm.price} onChange={(e) => setEditForm({...editForm, price: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" />
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium" placeholder="0.00" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Category</label>
+              <div className="col-span-1 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Category</label>
                 <select value={editForm.category} onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium cursor-pointer">
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium cursor-pointer appearance-none">
                   <option value="">Select category</option>
-                  {categories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+                  {categories.filter(c => !c.isBlocked).map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stock</label>
+              <div className="col-span-1 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Stock Quantity</label>
                 <input type="number" value={editForm.stock} onChange={(e) => setEditForm({...editForm, stock: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" />
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium" placeholder="0" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Weight</label>
-                <input type="number" value={editForm.weight} onChange={(e) => setEditForm({...editForm, weight: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" />
+              <div className="col-span-1 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Variant Type</label>
+                <select value={editForm.variantType} onChange={(e) => setEditForm({...editForm, variantType: e.target.value, variants: e.target.value === 'none' ? [] : editForm.variants})}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium cursor-pointer appearance-none">
+                  <option value="none">None</option>
+                  <option value="weight">Weight</option>
+                  <option value="size">Size</option>
+                  <option value="flavor">Flavor</option>
+                </select>
               </div>
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+              
+              {editForm.variantType && editForm.variantType !== 'none' && (
+                <div className="col-span-2 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-semibold text-gray-700">Variants</label>
+                    <button type="button" onClick={() => setEditForm({...editForm, variants: [...editForm.variants, { name: '', price: '', stock: 0, isDefault: editForm.variants.length === 0 }]})}
+                      className="flex items-center gap-1 text-sm text-green-600 font-semibold hover:text-green-700">
+                      <FiPlus /> Add Variant
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {editForm.variants?.map((v, idx) => (
+                      <div key={idx} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <div className="flex-1 min-w-[100px]">
+                          <label className="block text-xs font-semibold text-gray-500">Variant Name</label>
+                          <input type="text" value={v.name} onChange={(e) => setEditForm({...editForm, variants: editForm.variants.map((variant, i) => i === idx ? {...variant, name: e.target.value} : variant)})}
+                            placeholder="Name (e.g. 500g)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div className="w-24">
+                          <label className="block text-xs font-semibold text-gray-500">Price</label>
+                          <input type="number" value={v.price} onChange={(e) => setEditForm({...editForm, variants: editForm.variants.map((variant, i) => i === idx ? {...variant, price: e.target.value} : variant)})}
+                            placeholder="Price" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div className="w-24">
+                          <label className="block text-xs font-semibold text-gray-500">Stock</label>
+                          <input type="number" value={v.stock} onChange={(e) => setEditForm({...editForm, variants: editForm.variants.map((variant, i) => i === idx ? {...variant, stock: parseInt(e.target.value) || 0} : variant)})}
+                            placeholder="Stock" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                            <input type="radio" name={`default-edit-${idx}`} checked={v.isDefault} onChange={() => setEditForm({...editForm, variants: editForm.variants.map((variant, i) => ({...variant, isDefault: i === idx}))})}
+                              className="accent-green-600" /> Default
+                          </label>
+                          <button type="button" onClick={() => setEditForm({...editForm, variants: editForm.variants.filter((_, i) => i !== idx)})}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <FiTrash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {editForm.variants?.length === 0 && (
+                      <p className="text-sm text-gray-500 italic">Click "Add Variant" to add options</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Description</label>
                 <textarea rows={3} value={editForm.description} onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium resize-none" />
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-sm font-medium resize-none" placeholder="Product description..." />
               </div>
 
-              {/* Current Images Preview */}
               {editModal.product?.images?.length > 0 && newImages.length === 0 && (
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Images</label>
-                  <div className="flex gap-3 overflow-x-auto p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="col-span-2 space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Current Images</label>
+                  <div className="flex gap-3 overflow-x-auto p-3 bg-gray-50 rounded-xl border border-gray-100">
                     {editModal.product.images.map((img, idx) => (
-                      <img key={idx}
-                        src={img.startsWith('http') ? img : `http://localhost:5000/uploads/${img}`}
-                        alt={`img ${idx}`}
-                        className="h-20 w-20 object-cover rounded-lg flex-shrink-0 shadow-sm border border-slate-100"
-                      />
+                      <img key={idx} src={img.startsWith('http') ? img : `http://localhost:5000/uploads/${img}`} alt={`img ${idx}`}
+                        className="h-20 w-20 object-cover rounded-lg flex-shrink-0 shadow-sm border border-gray-100" />
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Upload New Images */}
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <div className="col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <FiUpload size={14} /> {newImages.length > 0 ? 'New Images (will replace current)' : 'Replace Images (optional)'}
                 </label>
                 <input type="file" multiple accept="image/*" onChange={onEditFileChange}
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer" />
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 cursor-pointer" />
                 {newPreviews.length > 0 && (
-                  <div className="flex gap-3 overflow-x-auto p-3 bg-blue-50/50 rounded-xl border border-blue-100 mt-2">
+                  <div className="flex gap-3 overflow-x-auto p-3 bg-green-50/50 rounded-xl border border-green-100 mt-2">
                     {newPreviews.map((prev, idx) => (
                       <div key={idx} className="relative group flex-shrink-0">
-                        <img src={prev} alt={`new ${idx}`} className="h-20 w-20 object-cover rounded-lg shadow-sm border border-blue-100" />
+                        <img src={prev} alt={`new ${idx}`} className="h-20 w-20 object-cover rounded-lg shadow-sm border border-green-100" />
                         <button type="button" onClick={() => removeNewImage(idx)}
                           className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
                           <FiX size={12} />
@@ -323,13 +393,13 @@ export default function AdminProductList() {
                 )}
               </div>
 
-              <div className="md:col-span-2 flex gap-4 pt-4">
+              <div className="col-span-2 flex gap-4 pt-4">
                 <button type="submit" disabled={editLoading}
-                  className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 transition-all disabled:opacity-70">
-                  {editLoading ? 'Updating…' : 'Save Changes'}
+                  className="flex-1 py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg hover:bg-green-700 transition-all disabled:opacity-70">
+                  {editLoading ? 'Updating...' : 'Save Changes'}
                 </button>
                 <button type="button" onClick={() => setEditModal({ isOpen: false, product: null })}
-                  className="px-8 py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all">
+                  className="px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition-all">
                   Cancel
                 </button>
               </div>

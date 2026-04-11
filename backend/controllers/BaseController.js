@@ -1,4 +1,6 @@
 const { loginUserSchema, addProductSchema, addCategorySchema, updateProfileSchema, addressSchema } = require('../utils/validation'); 
+const Product = require('../models/ProductModel');
+const User = require('../models/UserModel');
 
 class BaseController {
   static asyncHandler = (fn) => {
@@ -45,7 +47,36 @@ class BaseController {
     return value;
   }
 
-  static addproductValidation = (data) => {
+  static addproductValidation = (req) => {
+    const data = { ...req.body };
+    if (data.weight === '') delete data.weight; 
+
+    if (data.variants && typeof data.variants === 'string') {
+      try {
+        data.variants = JSON.parse(data.variants);
+      } catch (e) {
+        data.variants = [];
+      }
+    }
+    if (data.variantType === 'none') {
+      data.variants = [];
+    }
+    
+    if (req.files && req.files.length > 0) {
+      data.images = req.files.map(f => f.filename);
+      data.image = req.files[0].filename;
+    } 
+    else if (data.images && typeof data.images === 'string') {
+      data.images = [data.images];
+      data.image = data.images[0];
+    }
+    else if (Array.isArray(data.images) && data.images.every(img => typeof img === 'string')) {
+      data.image = data.images[0];
+    }
+    else {
+      data.images = [];
+      data.image = '';
+    }
     const { name, price, description, category, stock } = data;
     if (!name || !price || !description || !category || !stock) {
       throw { 
@@ -63,7 +94,7 @@ class BaseController {
         details: error.details
       };
     }
-    return value;
+    return { req, value };
   }   
 
   static addCategoryValidation = (data) => {
@@ -88,7 +119,6 @@ class BaseController {
   }   
 
   static handleFile = (file) => {
-
     if (!file) {
       throw { 
         name: 'FileError',
@@ -96,8 +126,8 @@ class BaseController {
         message: 'File is required',
       };
     }
-    return file;
+    return file.filename;
   }
 }
 
-module.exports = BaseController;
+module.exports = BaseController;

@@ -45,8 +45,6 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          // You might have a /auth/me or similar endpoint. 
-          // For now, we'll just set a basic user object from token/role.
           setUser({ role: localStorage.getItem('role') });
           await fetchWalletBalance();
         } catch (error) {
