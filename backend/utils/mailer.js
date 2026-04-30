@@ -127,6 +127,181 @@ function sendBankRefundEmail(to, amount, orderId) {
   return transporter.sendMail(mailOptions);
 }
 
+function sendOrderConfirmationEmail(to, order) {
+  const mailOptions = {
+    from: config.SMTP_FROM || config.SMTP_USER,
+    to,
+    subject: `🎉 Order Confirmed - #${order._id}`,
+    html: `
+      <h2>Order Confirmed!</h2>
+      <p>Thank you for your order! Your order <strong>#${order._id}</strong> has been confirmed.</p>
+      <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+      <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+      <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+      <div style="margin-top: 20px;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+      </div>
+    `,
+  };
+  
+  return transporter.sendMail(mailOptions);
+}
+
+function sendOrderShippedEmail(to, order) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `🚚 Order Shipped - #${order._id}`,
+      html: `
+        <h2>Order Shipped!</h2>
+        <p>Great news! Your order <strong>#${order._id}</strong> has been shipped.</p>
+        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendOrderDeliveredEmail(to, order) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `📦 Order Delivered - #${order._id}`,
+      html: `
+        <h2>Order Delivered!</h2>
+        <p>Great news! Your order <strong>#${order._id}</strong> has been delivered.</p>
+        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendOrderCancelledEmail(to, order) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `❌ Order Cancelled - #${order._id}`,
+      html: `
+        <h2>Order Cancelled</h2>
+        <p>Your order <strong>#${order._id}</strong> has been cancelled.</p>
+        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendOrderReturnInitiatedEmail(to, order) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `🔄 Return Requested - #${order._id}`,
+      html: `
+        <h2>Return Requested</h2>
+        <p>Your return request for <strong>Order #${order._id}</strong> has been received.</p>
+        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendOrderReturnApprovedEmail(to, order) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `✅ Return Approved - #${order._id}`,
+      html: `
+        <h2>Return Approved</h2>
+        <p>Your return request for <strong>Order #${order._id}</strong> has been approved.</p>
+        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendOrderReturnRejectedEmail(to, order) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `❌️ Return Rejected - #${order._id}`,
+      html: `
+        <h2>Return Rejected</h2>
+        <p>Your return request for <strong>Order #${order._id}</strong> has been rejected.</p>
+        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+        <p><strong>Total Amount:</strong> ₹${order.totalAmount}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/view-orders" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Order</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendWelcomeEmail(to, name) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `Welcome to Our Store`,
+      html: `
+        <h2>Welcome to Our Store</h2>
+        <p>Thank you for joining our store! ${name} We are excited to have you with us.</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Shop Now</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+
+  function sendWalletBalanceEmail(to, newBalance, description) {
+    const mailOptions = {
+      from: config.SMTP_FROM || config.SMTP_USER,
+      to,
+      subject: `💰 Wallet Balance Updated - BakeMart`,
+      html: `
+        <h2>Wallet Balance Updated</h2>
+        <p>Your wallet balance has been updated.</p>
+        <p><strong>Description:</strong> ${description}</p>
+        <p><strong>New Wallet Balance:</strong> ₹${newBalance}</p>
+        <div style="margin-top: 20px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/shop" style="background-color: #6B3F1F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Shop Now</a>
+        </div>
+      `,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
 module.exports = { 
   sendOtpEmail, 
   sendPasswordResetEmail, 
@@ -134,5 +309,14 @@ module.exports = {
   sendRefundSuccessEmail,
   sendRefundToWalletEmail,
   sendRefundChoiceEmail,
-  sendBankRefundEmail
+  sendBankRefundEmail,
+  sendOrderConfirmationEmail,
+  sendOrderShippedEmail,
+  sendOrderDeliveredEmail,
+  sendOrderCancelledEmail,
+  sendOrderReturnInitiatedEmail,
+  sendOrderReturnApprovedEmail,
+  sendOrderReturnRejectedEmail,
+  sendWelcomeEmail,
+  sendWalletBalanceEmail
 };

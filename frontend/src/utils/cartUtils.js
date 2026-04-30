@@ -101,17 +101,20 @@ export const removeFromCart = async (productId, variant = null) => {
   }
 };
 
-export const updateQuantityInCart = async (productId, quantity) => {
+export const updateQuantityInCart = async (productId, quantity, variant = null) => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        await api.put('/cart/update', { productId, quantity });
+        await api.put('/cart/update', { productId, quantity, variant });
       } catch (err) {
         console.error('Error updating quantity in DB cart:', err);
       }
     } else {
       const cart = getLocalCart();
-      const itemIndex = cart.findIndex(item => item._id === productId);
+      const itemIndex = cart.findIndex(item => 
+        item._id === productId && 
+        (variant ? item.selectedVariant?.name === variant.name : !item.selectedVariant)
+      );
       if (itemIndex > -1) {
         cart[itemIndex].quantity = quantity;
         localStorage.setItem('cart', JSON.stringify(cart));
@@ -137,7 +140,12 @@ export const mergeLocalCartOnLogin = async () => {
     const localCart = getLocalCart();
     if (localCart.length > 0) {
         try {
-            await api.post('/cart/merge', { localCart });
+            const formattedCart = localCart.map(item => ({
+                product: item._id,
+                quantity: item.quantity,
+                selectedVariant: item.selectedVariant
+            }));
+            await api.post('/cart/merge', { localCart: formattedCart });
             localStorage.removeItem('cart');
             window.dispatchEvent(new Event('cartUpdated'));
         } catch (err) {

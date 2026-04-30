@@ -7,6 +7,7 @@ import { EyeIcon, EyeOffIcon } from "../../components/Icons";
 import { FiMail, FiLock, FiArrowRight } from "react-icons/fi";
 import { mergeLocalCartOnLogin } from "../../utils/cartUtils";
 import { useAuth } from "../../context/AuthContext";
+import { useFormErrors, FieldError } from "../../hooks/useFormErrors.jsx";
 
 function Login() {
   const { login: authLogin } = useAuth();
@@ -16,9 +17,11 @@ function Login() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const { fieldError, setApiErrors, clearField } = useFormErrors();
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    clearField(e.target.name);
   };
 
   const handleSubmit = async (e) => {
@@ -30,16 +33,12 @@ function Login() {
     try {
       const res = await api.post("/auth/login", form);
       setSuccess("Login successfully");
-      
-      // Use the global login function from Context
       authLogin(res.data.user, res.data.token);
-      
-      // Merge local cart to DB
       await mergeLocalCartOnLogin();
-
       setTimeout(() => navigate("/", { replace: true }), 1000);
     } catch (err) {
       console.error(err);
+      setApiErrors(err);
       setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -95,10 +94,13 @@ function Login() {
                   required
                   value={form.email}
                   onChange={handleChange}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all shadow-inner"
+                  className={`w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 outline-none transition-all shadow-inner ${
+                    fieldError('email') ? 'ring-2 ring-red-300 focus:ring-red-300' : 'focus:ring-[#D4A96A]/20'
+                  }`}
                   placeholder="you@chocolatier.com"
                 />
               </div>
+              <FieldError error={fieldError('email')} />
             </div>
 
             <div className="space-y-2">
@@ -118,7 +120,9 @@ function Login() {
                   required
                   value={form.password}
                   onChange={handleChange}
-                  className="w-full pl-12 pr-12 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all shadow-inner"
+                  className={`w-full pl-12 pr-12 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 outline-none transition-all shadow-inner ${
+                    fieldError('password') ? 'ring-2 ring-red-300 focus:ring-red-300' : 'focus:ring-4 focus:ring-[#D4A96A]/20'
+                  }`}
                   placeholder="••••••••"
                 />
                 <button
@@ -129,6 +133,7 @@ function Login() {
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
+              <FieldError error={fieldError('password')} />
             </div>
 
             <button

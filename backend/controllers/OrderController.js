@@ -1,5 +1,4 @@
 const OrderService = require('../services/OrderService');
-const WalletController = require('./WalletController');
 
 class OrderController {
   
@@ -33,6 +32,10 @@ class OrderController {
 
   static async failOrder(req, res) {
     return await OrderService.failOrder(req, res);
+  }
+
+  static async reorder(req, res) {
+    return await OrderService.reorder(req, res);
   }
 }
 

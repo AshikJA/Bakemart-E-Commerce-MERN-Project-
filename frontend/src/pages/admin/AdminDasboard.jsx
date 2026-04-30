@@ -15,6 +15,7 @@ export default function AdminDasboard() {
     revenue: { count: 0, change: '' },
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [revenueCount, setRevenueCount] = useState(0);
   const [productsCount, setProductsCount] = useState(0);   
   const [usersCount, setUsersCount] = useState(0);
@@ -34,9 +35,10 @@ export default function AdminDasboard() {
     try {
       const response = await api.get('/admin/dashboard-data');
       
-      const { stats, recentOrders, recentProducts, recentUsers } = response.data;
+      const { stats, recentOrders, recentProducts, recentUsers, recentActivity } = response.data;
       setStats(stats);
       setRecentOrders(recentOrders || []);
+      setRecentActivity(recentActivity || []);
       setUsersCount(stats.users.count);
       setProductsCount(stats.products.count);
       setRevenueCount(stats.revenue.count);
@@ -266,34 +268,55 @@ export default function AdminDasboard() {
                   Refund Management
                 </button>
                 </Link>
+
+                <Link to="/admin/banners" className="w-full block">
+                <button className="w-full flex items-center justify-center px-4 py-2.5 bg-[#D4A96A] text-[#6B3F1F] rounded-lg text-sm font-medium hover:bg-[#E5C07B] transition shadow-sm">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Manage Banners
+                </button>
+                </Link>
               </div>
             </div>
 
-            {/* Recent Activity Card (Placeholder for now) */}
+            {/* Recent Activity Card */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h2>
-               <div className="space-y-4">
-                 <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
-                    <div>
-                      <p className="text-sm text-slate-700">New user registered: <span className="font-medium">john_doe</span></p>
-                      <p className="text-xs text-slate-400 mt-0.5">2 hours ago</p>
-                    </div>
-                 </div>
-                 <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-yellow-500"></div>
-                    <div>
-                      <p className="text-sm text-slate-700">Order <span className="font-medium">#ORD-6949...</span> placed</p>
-                      <p className="text-xs text-slate-400 mt-0.5">5 hours ago</p>
-                    </div>
-                 </div>
-                 <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-green-500"></div>
-                    <div>
-                      <p className="text-sm text-slate-700">Product "Wireless Headphones" updated</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Yesterday</p>
-                    </div>
-                 </div>
+               <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                 {recentActivity.length > 0 ? recentActivity.map((activity, index) => (
+                   <div key={index} className="flex items-start space-x-3">
+                     <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
+                       activity.color === 'blue' ? 'bg-blue-500' :
+                       activity.color === 'green' ? 'bg-green-500' :
+                       activity.color === 'purple' ? 'bg-purple-500' :
+                       activity.color === 'yellow' ? 'bg-yellow-500' :
+                       activity.color === 'red' ? 'bg-red-500' : 'bg-slate-400'
+                     }`}></div>
+                     <div className="flex-1 min-w-0">
+                       <p className="text-sm text-slate-700">{activity.message}</p>
+                       <div className="flex items-center gap-2 mt-0.5">
+                         <p className="text-xs text-slate-400">{activity.time}</p>
+                         {activity.amount && (
+                           <span className="text-xs font-medium text-slate-600">₹{activity.amount?.toLocaleString()}</span>
+                         )}
+                         {activity.status && (
+                           <span className={`text-xs px-1.5 py-0.5 rounded ${
+                             activity.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                             activity.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                             activity.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                             activity.status === 'processing' ? 'bg-purple-100 text-purple-700' :
+                             'bg-slate-100 text-slate-700'
+                           }`}>
+                             {activity.status}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 )) : (
+                   <p className="text-sm text-slate-400 text-center py-4">No recent activity</p>
+                 )}
                </div>
             </div>
 

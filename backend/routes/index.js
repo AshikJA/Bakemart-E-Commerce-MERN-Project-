@@ -12,6 +12,8 @@ const returnRoutes = require('./returnRoutes');
 const adminReturnRoutes = require('./adminReturnRoutes');
 const invoiceRoutes = require('./invoiceRoutes');
 const refundRoutes = require('./refundRoutes');
+const deliveryRoutes = require('./deliveryRoute');
+const bannerRoutes = require('./bannerRoute');
 
 const setupRoutes = (app) => {
   app.use('/api/auth', authRoutes);
@@ -26,6 +28,8 @@ const setupRoutes = (app) => {
   app.use('/api/wallet', walletRoutes);
   app.use('/api/cart', cartRoutes);
   app.use('/api/chatbot', chatbotRoutes);
+  app.use('/api/shipping', deliveryRoutes);
+  app.use('/api/banners', bannerRoutes);
 };
 
 module.exports = setupRoutes;

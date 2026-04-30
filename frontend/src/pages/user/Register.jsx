@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { EyeIcon, EyeOffIcon } from "../../components/Icons";
 import { FiUser, FiMail, FiLock, FiCheckCircle, FiAlertCircle, FiAlertTriangle } from "react-icons/fi";
+import { useFormErrors, FieldError } from "../../hooks/useFormErrors.jsx";
 
 /* ── Password-strength helper ── */
 function getStrength(pw) {
@@ -32,6 +33,7 @@ function Register() {
   const [error,   setError]     = useState("");
   const [success, setSuccess]   = useState("");
   const navigate = useNavigate();
+  const { fieldError, setApiErrors, clearField } = useFormErrors();
 
   const strength = useMemo(() => getStrength(form.password), [form.password]);
 
@@ -43,8 +45,8 @@ function Register() {
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    // Clear top-level error when user starts typing
     if (error) setError("");
+    clearField(e.target.name);
   };
 
   const handleSubmit = async (e) => {
@@ -70,9 +72,8 @@ function Register() {
       setTimeout(() => navigate("/verify-otp", { state: { email } }), 1500);
     } catch (err) {
       console.error(err);
+      setApiErrors(err);
       const msg = err.response?.data?.message;
-
-      /* Map backend messages to friendly UI copy */
       if (msg === "User already exists") {
         setError("An account with this email already exists. Try signing in instead.");
       } else if (msg === "Passwords do not match") {
@@ -137,10 +138,13 @@ function Register() {
                     required
                     value={form.name}
                     onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all shadow-inner"
-                    placeholder="John Doe"
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 outline-none transition-all shadow-inner ${
+                      fieldError('name') ? 'ring-2 ring-red-300 focus:ring-red-300' : 'focus:ring-[#D4A96A]/20'
+                    }`}
+                    placeholder="Your Name"
                   />
                 </div>
+                <FieldError error={fieldError('name')} />
               </div>
 
               {/* Email */}
@@ -154,10 +158,13 @@ function Register() {
                     required
                     value={form.email}
                     onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all shadow-inner"
-                    placeholder="john@example.com"
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-sm font-bold text-[#6B3F1F] placeholder:text-gray-300 focus:ring-4 outline-none transition-all shadow-inner ${
+                      fieldError('email') ? 'ring-2 ring-red-300 focus:ring-red-300' : 'focus:ring-[#D4A96A]/20'
+                    }`}
+                    placeholder="your@email.com"
                   />
                 </div>
+                <FieldError error={fieldError('email')} />
               </div>
             </div>
 

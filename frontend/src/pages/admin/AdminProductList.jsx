@@ -26,7 +26,8 @@ export default function AdminProductList() {
   const fetchProducts = async () => {
     try {
       const res = await api.get('/admin/products');
-      setProducts(res.data.products || res.data);
+      setProducts(res.data.products || res.data)
+      
     } catch (err) {
       toast.error('Failed to fetch products');
     } finally {
@@ -146,7 +147,7 @@ const submitEdit = async (e) => {
     const img = (product.images && product.images.length > 0) ? product.images[0] : product.image;
     if (!img) return 'https://via.placeholder.com/100?text=No+Img';
     return img.startsWith('http') ? img : `http://localhost:5000/uploads/${img}`;
-  };
+  };  
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 sm:p-8 font-sans">

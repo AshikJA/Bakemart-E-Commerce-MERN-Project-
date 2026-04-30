@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FiShoppingCart, FiUser, FiSearch, FiMenu, FiX, FiPocket } from "react-icons/fi";
+import { FiShoppingCart, FiUser, FiSearch, FiMenu, FiX, FiHeart } from "react-icons/fi";
 import { GiChocolateBar } from "react-icons/gi";
 import { LogoutIcon } from "./Icons";
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +32,7 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
-  const navLinks = ["Home", "Shop", "Hampers", "Cakes", "About"];
+  const navLinks = ["Home", "Contact", "About"];
 
   return (
     <nav className="bg-[#6B3F1F] text-[#FDF6EC] shadow-lg sticky top-0 z-50 py-1">
@@ -83,8 +83,8 @@ const Navbar = () => {
 
               {authUser && (
                 <>
-                  <Link to="/wallet" className="flex items-center gap-1.5 cursor-pointer group">
-                    <FiPocket className="group-hover:text-[#D4A96A] transition-colors" />
+                  <Link to="/wishlist" className="flex items-center gap-1.5 cursor-pointer group">
+                    <FiHeart className="group-hover:text-[#D4A96A] transition-colors" />
                   </Link>
                   <Link to="/profile" className="cursor-pointer hidden sm:block">
                     <FiUser className="hover:text-[#D4A96A] transition-colors" />

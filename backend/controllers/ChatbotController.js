@@ -1,22 +1,14 @@
-const OpenAI = require('openai');
 const Order = require('../models/OrderModel');
 const Product = require('../models/ProductModel');
 
-let openai = null;
+const GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_mock_api_key_here';
 
-function getOpenAI() {
-  if (!openai && process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here') {
-    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return openai;
-}
-
-// Extract MongoDB ObjectId from message
+// Extract order ID from message
 function extractOrderId(message) {
   const patterns = [
-    /#([a-f0-9]{24})/i,
-    /order[^\w]*([a-f0-9]{24})/i,
-    /([a-f0-9]{24})/i,
+    /#([a-f0-9]{8,24})/i,
+    /order[^\w]*([a-f0-9]{8,24})/i,
+    /([a-f0-9]{8})/i,
   ];
   for (const pattern of patterns) {
     const match = message.match(pattern);
@@ -80,32 +72,23 @@ function formatProduct(product) {
 ${product.description ? `**Description:** ${product.description}` : ''}`;
 }
 
-const SYSTEM_PROMPT = `You are BakeMart customer support assistant 🍫
+const SYSTEM_PROMPT = `You are BakeMart customer support assistant.
 
-Your personality:
-- Warm, friendly, and helpful
-- Short and concise responses
-- Use Indian Rupees (₹) for all prices
-- Always be positive and enthusiastic about products
+IMPORTANT RULES:
+1. Only use information explicitly provided in [brackets] or [parentheses] in the user's message
+2. NEVER make up order details, products, or delivery times
+3. If info is not provided, say "I don't have that information"
+4. Use Indian Rupees (₹) for prices
+5. Keep responses under 80 words
 
-About BakeMart:
-- Indian online store for chocolates, gift hampers, cake supplies
-- Free delivery on orders above ₹500
-- Delivery charge: ₹100 below ₹500
+Shop info:
+- Online store for chocolates, gift hampers, cakes
+- Free delivery on orders above ₹500, else ₹100
 - 7 days return policy
-- Payment options: Razorpay, UPI, Cards, Netbanking, COD
-- Support email: Bakemartsullia123@gmail.com
+- Payment: UPI, Cards, Netbanking, COD
+- Email: Bakemartsullia123@gmail.com
 
-You can help with:
-- Order status queries
-- Product information and recommendations
-- Delivery and shipping info
-- Returns and refunds
-- Payment related questions
-
-When providing order info, use the data given to you. Be specific with order numbers, amounts, and status.
-
-Keep responses under 100 words. Always end with an offer to help further.`;
+When user asks about order status, use ONLY the data provided in [Order Info] section.`;
 
 class ChatbotController {
   static async chatbotReply(req, res) {
@@ -121,28 +104,47 @@ class ChatbotController {
 
       // Check if it's an order query
       const orderId = extractOrderId(message);
+      let orderNotFound = false;
+      
       if (orderId) {
         try {
-          let order = await Order.findById(orderId).lean();
+          let order = null;
           
-          // If not found by ID, try to find by user's orders
-          if (!order && userId) {
-            const userOrders = await Order.find({ user: userId }).lean();
-            order = userOrders.find(o => o._id.toString().slice(-8).toUpperCase() === orderId.toUpperCase());
-          }
-
-          // Try finding most recent order if user wants "my order"
-          if (!order && isOrderIntent(message)) {
+          // Search ALL orders and find by short ID (last 8 chars)
+          const allOrders = await Order.find({}).lean();
+          order = allOrders.find(o => o._id.toString().slice(-8).toUpperCase() === orderId.toUpperCase());
+          
+          console.log('Searching for order ID:', orderId);
+          console.log('Found orders count:', allOrders.length);
+          
+          // If still not found, try finding my last order
+          if (!order && (isOrderIntent(message) || message.toLowerCase().includes('my order'))) {
             const query = userId ? { user: userId } : {};
             order = await Order.findOne(query).sort({ createdAt: -1 }).lean();
           }
 
           if (order) {
-            dbResults = { type: 'order', data: formatOrderStatus(order) };
-            contextMessage = `${message}\n\n[Order Info]: ${formatOrderStatus(order)}`;
+            const orderInfo = formatOrderStatus(order);
+            console.log('Found order:', order._id, 'Status:', order.orderStatus);
+            
+            // Return order data directly without calling AI
+            return res.json({ 
+              reply: orderInfo + "\n\nAnything else I can help with? 🍫", 
+              type: 'order' 
+            });
+          } else if (orderId) {
+            // Order ID found but order not in DB - return error
+            return res.json({ 
+              reply: "I couldn't find an order with that ID. Please check your order number and try again.\n\nAnything else I can help with? 🍫", 
+              type: 'error' 
+            });
+          } else {
+            orderNotFound = true;
+            console.log('Order not found:', orderId);
           }
         } catch (err) {
           console.error('Order lookup error:', err);
+          orderNotFound = true;
         }
       }
 
@@ -187,18 +189,11 @@ class ChatbotController {
         }
       }
 
-      // Call OpenAI
-      const client = getOpenAI();
+      // Check for common queries first (work with or without API key)
+      const lowerMsg = message.toLowerCase();
       
-      if (!client) {
-        // Fallback responses without OpenAI
-        if (dbResults) {
-          return res.json({ reply: dbResults.data, type: dbResults.type });
-        }
-        
-        // Default fallback
-        const lowerMsg = message.toLowerCase();
-        if (lowerMsg.includes('delivery') || lowerMsg.includes('shipping')) {
+      if (!dbResults) {
+        if (lowerMsg.includes('delivery') || lowerMsg.includes('shipping') || lowerMsg.includes('delivery charge')) {
           return res.json({ 
             reply: "🚚 **Delivery Info**\n\n• Free delivery on orders above ₹500\n• ₹100 delivery charge below ₹500\n• Delivery within 3-5 business days\n\nNeed anything else? 🍫", 
             type: 'info' 
@@ -216,6 +211,16 @@ class ChatbotController {
             type: 'info' 
           });
         }
+      }
+
+      // Call Groq API
+      const isMockKey = GROQ_API_KEY === 'gsk_mock_api_key_here' || !GROQ_API_KEY;
+      
+      if (isMockKey) {
+        // Return DB results or greeting without Groq API
+        if (dbResults) {
+          return res.json({ reply: dbResults.data, type: dbResults.type });
+        }
         
         return res.json({ 
           reply: "👋 Hi! I'm your BakeMart assistant!\n\nI can help you with:\n• 🍫 Product info & recommendations\n• 📦 Order tracking (share your Order ID)\n• 🚚 Delivery info\n• ↩️ Returns & refunds\n• 💳 Payment options\n\nWhat can I help you with today?", 
@@ -223,18 +228,37 @@ class ChatbotController {
         });
       }
 
-      // OpenAI is available - make the API call
-      const completion = await client.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+      // Groq API call using fetch
+      const requestBody = {
+        model: 'llama-3.1-8b-instant',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: contextMessage }
         ],
-        max_tokens: 300,
-        temperature: 0.7,
+        max_tokens: 800,
+        temperature: 0.5,
+      };
+      
+      console.log('Chatbot request - model:', requestBody.model, 'key:', GROQ_API_KEY?.slice(0, 8));
+      
+      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
-      const reply = completion.choices[0]?.message?.content?.trim() || "I'm sorry, I couldn't process that. Please try again!";
+      if (!groqResponse.ok) {
+        const errorText = await groqResponse.text();
+        console.error('Groq API error:', groqResponse.status, errorText);
+        return res.json({ reply: dbResults?.data || "I'm having trouble connecting right now. Please try again!", type: dbResults?.type || 'error' });
+      }
+
+      const groqData = await groqResponse.json();
+      console.log('Groq response:', JSON.stringify(groqData).slice(0, 200));
+      const reply = groqData.choices?.[0]?.message?.content?.trim() || "I'm sorry, I couldn't process that. Please try again!";
 
       return res.json({ 
         reply: reply + "\n\nAnything else I can help with? 🍫", 

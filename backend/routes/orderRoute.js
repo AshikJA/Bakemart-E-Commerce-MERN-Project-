@@ -11,6 +11,7 @@ router.post('/verify-payment', authenticateUser, searchLimiter, OrderController.
 router.get('/my-orders', authenticateUser, searchLimiter, OrderController.getUserOrders);
 router.post('/:orderId/cancel', authenticateUser, searchLimiter, OrderController.cancelOrder);
 router.post('/:id/fail', authenticateUser, searchLimiter, OrderController.failOrder);
+router.post('/:orderId/reorder', authenticateUser, searchLimiter, OrderController.reorder);
 
 // Admin Routes
 router.get('/admin/all', authenticateAdmin, searchLimiter, OrderController.getAllOrders);

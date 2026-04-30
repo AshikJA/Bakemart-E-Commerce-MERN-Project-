@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { FiUser, FiShoppingBag, FiCreditCard, FiPlus, FiEdit2, FiTrash2, FiLoader } from 'react-icons/fi';
 import useDebounce from '../../hooks/useDebounce';
 import usePincode from '../../hooks/usePincode';
+import { EyeIcon, EyeOffIcon } from '../../components/Icons';
 
 function Profile() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -30,6 +31,12 @@ function Profile() {
   const [emailOtp, setEmailOtp] = useState('');
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
   const [addressToDelete, setAddressToDelete] = useState(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Pincode lookup using custom hooks
   const [pincodeInput, setPincodeInput] = useState('');
@@ -179,35 +186,68 @@ function Profile() {
     setShowAddressForm(true);
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmNewPassword
+      });
+      toast.success('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err) {
+      console.error('Error changing password:', err);
+      const message = err.response?.data?.message;
+      if (message === 'Invalid current password') {
+        toast.error('Current password is incorrect');
+      } else {
+        toast.error(message || 'Failed to change password');
+      }
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-[#FDF6EC] py-10 px-4">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
         {/* Sidebar */}
-        <div className="w-full lg:w-1/4 bg-[#F5E6D3] rounded-[35px] p-8 h-fit lg:h-[700px] shadow-sm border border-[#D4A96A]/20">
-          <div className="flex flex-col gap-15 mt-20">
+        <div className="w-full lg:w-1/4 lg:sticky lg:top-20 bg-[#F5E6D3] rounded-[35px] p-6 lg:p-8 h-fit shadow-sm border border-[#D4A96A]/20">
+          <div className="flex flex-col gap-4">
             <button 
               onClick={() => setActiveTab('profile')}
-              className={`w-full py-5 rounded-[25px] text-2xl font-black transition-all ${activeTab === 'profile' ? 'bg-[#6B3F1F] text-white shadow-xl scale-105' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
+              className={`w-full py-4 rounded-[25px] text-lg font-black transition-all ${activeTab === 'profile' ? 'bg-[#6B3F1F] text-white shadow-xl' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
             >
               Profile
             </button>
             <button 
               onClick={() => setActiveTab('orders')}
-              className={`w-full py-5 rounded-[25px] text-2xl font-black transition-all ${activeTab === 'orders' ? 'bg-[#6B3F1F] text-white shadow-xl scale-105' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
+              className={`w-full py-4 rounded-[25px] text-lg font-black transition-all ${activeTab === 'orders' ? 'bg-[#6B3F1F] text-white shadow-xl' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
             >
               Orders
             </button>
             <button 
               onClick={() => setActiveTab('wallet')}
-              className={`w-full py-5 rounded-[25px] text-2xl font-black transition-all ${activeTab === 'wallet' ? 'bg-[#6B3F1F] text-white shadow-xl scale-105' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
+              className={`w-full py-4 rounded-[25px] text-lg font-black transition-all ${activeTab === 'wallet' ? 'bg-[#6B3F1F] text-white shadow-xl' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
             >
               Wallet
             </button>
+            <button 
+              onClick={() => setActiveTab('change-password')}
+              className={`w-full py-4 rounded-[25px] text-lg font-black transition-all ${activeTab === 'change-password' ? 'bg-[#6B3F1F] text-white shadow-xl' : 'bg-white text-[#6B3F1F] hover:bg-[#FDF6EC]'}`}
+            >
+              Change Password
+            </button>
             <Link to="/">
             <button 
-              className={`w-full py-5 rounded-[25px] text-2xl font-black bg-[#D4A96A] hover:bg-[#A0522D] text-[#6B3F1F] hover:text-white transition-all active:scale-95`}
+              className={`w-full py-4 rounded-[25px] text-lg font-black bg-[#D4A96A] hover:bg-[#A0522D] text-[#6B3F1F] hover:text-white transition-all active:scale-95`}
             >
               Dashboard
             </button>
@@ -299,6 +339,72 @@ function Profile() {
               </div>
             </div>
           )}
+
+          {/*changePassword*/}
+              {activeTab === 'change-password' && (
+              <form onSubmit={handleChangePassword} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xl font-bold text-[#6B3F1F] ml-2">Current Password</label>
+                  <div className="relative">
+                    <input 
+                      type={showCurrentPassword ? "text" : "password"} 
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-6 py-4 rounded-2xl bg-[#FDF6EC] border-none text-[#6B3F1F] text-lg shadow-sm focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all pr-14"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#6B3F1F] transition-colors p-1"
+                    >
+                      {showCurrentPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xl font-bold text-[#6B3F1F] ml-2">New Password</label>
+                  <div className="relative">
+                    <input 
+                      type={showNewPassword ? "text" : "password"} 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-6 py-4 rounded-2xl bg-[#FDF6EC] border-none text-[#6B3F1F] text-lg shadow-sm focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all pr-14"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#6B3F1F] transition-colors p-1"
+                    >
+                      {showNewPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xl font-bold text-[#6B3F1F] ml-2">Confirm New Password</label>
+                  <div className="relative">
+                    <input 
+                      type={showConfirmPassword ? "text" : "password"} 
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="w-full px-6 py-4 rounded-2xl bg-[#FDF6EC] border-none text-[#6B3F1F] text-lg shadow-sm focus:ring-4 focus:ring-[#D4A96A]/20 outline-none transition-all pr-14"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#6B3F1F] transition-colors p-1"
+                    >
+                      {showConfirmPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <button 
+                  type="submit"
+                  className="w-full py-4 mt-4 bg-[#6B3F1F] text-white text-2xl font-black rounded-2xl shadow-xl hover:bg-[#A0522D] transition-all active:scale-95"
+                >
+                  Change Password
+                </button>
+              </form>
+              )}
 
           {activeTab === 'orders' && (
             <div className="flex flex-col items-center justify-center py-20 text-center">

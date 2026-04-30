@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api/client';
 import { toast } from 'react-toastify';
-import { FiXCircle, FiRefreshCcw, FiArrowLeft, FiCheckCircle, FiUpload, FiX, FiImage, FiDownload } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { FiXCircle, FiRefreshCcw, FiArrowLeft, FiCheckCircle, FiUpload, FiX, FiImage, FiDownload, FiRefreshCw } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function ViewOrders() {
   const [orders, setOrders] = useState([]);
@@ -23,7 +23,9 @@ export default function ViewOrders() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(null);
+  const [reordering, setReordering] = useState(null);
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
   const fetchOrders = async () => {
     try {
@@ -326,6 +328,26 @@ export default function ViewOrders() {
     }
   };
 
+  const handleReorder = async (order) => {
+    setReordering(order._id);
+    try {
+      const response = await api.post(`/orders/${order._id}/reorder`);
+      const { message, failedItems } = response.data;
+
+      if (failedItems && failedItems.length > 0) {
+        const failedList = failedItems.map(f => `${f.name}: ${f.reason}`).join('\n');
+        toast.warning(`${message}\n\nFailed:\n${failedList}`);
+      } else {
+        toast.success(message);
+      }
+      navigate('/cart');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to reorder');
+    } finally {
+      setReordering(null);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-[#FDF6EC] flex items-center justify-center font-bold text-[#6B3F1F]">Loading Orders...</div>;
   }
@@ -383,6 +405,9 @@ export default function ViewOrders() {
                           <img src={item.image ? (item.image.startsWith('http') ? item.image : `${api.defaults.baseURL.replace('/api', '')}/uploads/${item.image}`) : 'https://via.placeholder.com/50'} className="w-12 h-12 rounded-lg object-cover bg-white shadow-sm" alt="" />
                           <div>
                             <p className="font-bold text-[#6B3F1F]">{item.name}</p>
+                            {item.selectedVariant && (
+                              <p className="text-[10px] font-bold text-gray-400">Variant: {item.selectedVariant.name}</p>
+                            )}
                             <p className="text-[10px] font-bold text-gray-400">Qty: {item.quantity}</p>
                           </div>
                         </div>
@@ -391,62 +416,80 @@ export default function ViewOrders() {
                     ))}
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="text-lg font-black text-[#6B3F1F]">
                       Total: ₹{order.totalAmount}
                     </div>
-                    
-                    <div className="flex gap-3 w-full sm:w-auto flex-wrap">
+
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
                       {order.paymentStatus === 'paid' && (
                         <button 
                           onClick={() => downloadInvoice(order._id)}
                           disabled={downloading === order._id}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-[#6B3F1F] text-[#6B3F1F] rounded-full font-bold text-sm hover:bg-[#FDF6EC] transition-colors disabled:opacity-60"
+                          className="flex items-center justify-center gap-2 px-3 py-2 border border-[#6B3F1F] text-[#6B3F1F] rounded-lg font-bold text-xs hover:bg-[#FDF6EC] transition-colors disabled:opacity-60"
                         >
                           {downloading === order._id ? (
                             <span className="w-4 h-4 border-2 border-[#6B3F1F]/30 border-t-[#6B3F1F] rounded-full animate-spin" />
                           ) : (
-                            <FiDownload size={16} />
+                            <FiDownload size={14} />
                           )}
-                          Download Invoice
+                          Invoice
+                        </button>
+                      )}
+                      {order.orderStatus === 'delivered' && (
+                        <button 
+                          onClick={() => handleReorder(order)}
+                          disabled={reordering === order._id}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#6B3F1F] to-[#A0522D] text-white rounded-lg font-bold text-xs hover:shadow-lg hover:shadow-[#6B3F1F]/30 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {reordering === order._id ? (
+                            <>
+                              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <FiRefreshCw size={14} /> Buy Again
+                            </>
+                          )}
                         </button>
                       )}
                       {order.paymentStatus === 'failed' && order.paymentMethod !== 'COD' && (
                         <>
                           <button 
                             onClick={() => handleRetryPayment(order)}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-[#6B3F1F] text-white rounded-xl font-bold hover:bg-[#A0522D] transition-all shadow-lg active:scale-95"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#6B3F1F] text-white rounded-lg font-bold text-xs hover:bg-[#A0522D] transition-all shadow-sm active:scale-95"
                           >
-                            <FiCheckCircle size={18} /> Pay Now
+                            <FiCheckCircle size={14} /> Pay Now
                           </button>
                           <button 
                             onClick={() => openModal(order._id, 'cancel')}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                            className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg font-bold text-xs hover:bg-red-100 transition-colors"
                           >
-                            <FiXCircle /> Cancel Order
+                            <FiXCircle size={14} /> Cancel
                           </button>
                         </>
                       )}
                       {['pending', 'processing'].includes(order.orderStatus) && order.paymentStatus !== 'failed' && (
                         <button 
                           onClick={() => openModal(order._id, 'cancel')}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                          className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg font-bold text-xs hover:bg-red-100 transition-colors"
                         >
-                          <FiXCircle /> Cancel Order
+                          <FiXCircle size={14} /> Cancel
                         </button>
                       )}
                       {order.orderStatus === 'delivered' && (
                         <>
                           {order.returnRequest?.requested ? (
-                            <span className={`px-4 py-2 rounded-xl font-bold text-sm ${returnBadge?.class}`}>
+                            <span className={`px-3 py-2 rounded-lg font-bold text-xs ${returnBadge?.class}`}>
                               {returnBadge?.label}
                             </span>
                           ) : (
                             <button 
                               onClick={() => openModal(order._id, 'return')}
-                              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-colors"
+                              className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 transition-colors"
                             >
-                              <FiRefreshCcw /> Request Return
+                              <FiRefreshCcw size={14} /> Return
                             </button>
                           )}
                         </>

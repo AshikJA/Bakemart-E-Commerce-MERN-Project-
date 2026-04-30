@@ -1,7 +1,7 @@
 const User = require('../models/UserModel');
 const WalletTransaction = require('../models/WalletTransactionModel');
 
-class WallerService {
+class WalletService {
     static async getWalletBalance(userId) { 
         const user = await User.findById(userId).select('walletBalance');
         if (!user) {
@@ -32,6 +32,7 @@ class WallerService {
             description: reason,
             orderId
           });
+
     
           return user.walletBalance;
         } catch (error) {
@@ -40,7 +41,6 @@ class WallerService {
         }
       }
     
-      // Internal Helper: debitWallet
       static async debitWallet(userId, amount, reason, orderId = null) {
         try {
           const user = await User.findById(userId);
@@ -60,7 +60,7 @@ class WallerService {
             description: reason,
             orderId
           });
-    
+
           return user.walletBalance;
         } catch (error) {
           console.error('Error debiting wallet:', error);
@@ -69,4 +69,4 @@ class WallerService {
       }
 } 
 
-module.exports = WallerService;
+module.exports = WalletService;

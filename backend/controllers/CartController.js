@@ -9,12 +9,12 @@ class CartController extends BaseController {
   });
 
   static addToCart = BaseController.asyncHandler(async (req, res) => {
-    const cart = await CartService.addToCart(req.userId, req.body.productId, req.body.quantity);
+    const cart = await CartService.addToCart(req.userId, req.body.productId, req.body.quantity, req.body.variant);
     return res.status(200).json(cart);
   });
 
   static updateQuantity = BaseController.asyncHandler(async (req, res) => {
-    const cart = await CartService.updateQuantity(req.userId, req.body.productId, req.body.quantity);
+    const cart = await CartService.updateQuantity(req.userId, req.body.productId, req.body.quantity, req.body.variant);
     return res.status(200).json(cart);
   });
 

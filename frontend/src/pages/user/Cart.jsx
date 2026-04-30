@@ -120,7 +120,7 @@ function Cart() {
     <div className="min-h-screen bg-[#FDF6EC] py-12 px-6">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-black text-[#6B3F1F] tracking-tight">Shopping Bag</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-[#6B3F1F] tracking-tight">Shopping Bag</h1>
           <button 
             onClick={() => setIsConfirmingClear(true)}
             className="text-red-500 font-bold text-sm hover:underline"
@@ -134,45 +134,50 @@ function Cart() {
             {cartItems.map((item) => {
               const uniqueKey = item.cartItemId || item._id + (item.selectedVariant ? `-${item.selectedVariant.name}` : '');
               return (
-                <div key={uniqueKey} className="relative bg-white p-5 rounded-[32px] shadow-sm border border-[#D4A96A]/10 flex flex-col sm:flex-row items-center gap-6 group hover:shadow-md transition-shadow overflow-hidden">
+                <div key={uniqueKey} className="relative bg-white p-4 sm:p-5 rounded-[24px] sm:rounded-[32px] shadow-sm border border-[#D4A96A]/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6 group hover:shadow-md transition-shadow overflow-hidden">
                   <button 
                     onClick={() => handleRemove(item)}
-                    className="absolute top-4 right-4 p-2 text-red-400 hover:text-red-600 sm:relative sm:top-0 sm:right-0 sm:p-3 sm:text-red-100 sm:bg-transparent sm:group-hover:bg-red-50 sm:group-hover:text-red-500 rounded-2xl transition-all z-10"
+                    className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 text-red-400 hover:text-red-500 bg-red-50 sm:bg-transparent sm:group-hover:bg-red-50 rounded-xl transition-all z-10"
                   >
-                    <FiTrash2 size={20} />
+                    <FiTrash2 size={16} className="sm:w-5 sm:h-5" />
                   </button>
 
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100">
-                    <img 
-                      src={item.image ? (item.image.startsWith('http') ? item.image : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${item.image}`) : 'https://via.placeholder.com/200x200?text=Choco'} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  
-                  <div className="flex-1 text-center sm:text-left min-w-0 w-full">
-                    <span className="text-[10px] font-black text-[#D4A96A] uppercase tracking-[0.2em]">{item.category}</span>
-                    <h3 className="text-lg font-bold text-[#6B3F1F] truncate pr-8 sm:pr-0">{item.name}</h3>
-                    {item.selectedVariant && (
-                      <p className="text-xs text-gray-500 font-medium">Variant: {item.selectedVariant.name}</p>
-                    )}
-                    <p className="text-[#A0522D] font-black">₹{item.price}</p>
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100">
+                      <img 
+                        src={item.image ? (item.image.startsWith('http') ? item.image : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${item.image}`) : 'https://via.placeholder.com/200x200?text=Choco'} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    
+                    <div className="flex-1 text-left min-w-0">
+                      <span className="text-[10px] font-black text-[#D4A96A] uppercase tracking-[0.2em]">{item.category}</span>
+                      <h3 className="text-base sm:text-lg font-bold text-[#6B3F1F] truncate pr-8 sm:pr-0">{item.name}</h3>
+                      {item.selectedVariant && (
+                        <p className="text-[10px] sm:text-xs text-gray-500 font-medium leading-none mb-1">Variant: {item.selectedVariant.name}</p>
+                      )}
+                      <p className="text-[#A0522D] font-black text-sm sm:text-base">₹{item.price}</p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
-                    <button 
-                      onClick={() => handleUpdateQuantity(item, -1)}
-                      className="p-1 text-[#6B3F1F] hover:bg-white rounded-lg transition-colors"
-                    >
-                      <FiMinus size={16} strokeWidth={3} />
-                    </button>
-                    <span className="w-8 text-center font-black text-[#6B3F1F] text-lg">{item.quantity}</span>
-                    <button 
-                      onClick={() => handleUpdateQuantity(item, 1)}
-                      className="p-1 text-[#6B3F1F] hover:bg-white rounded-lg transition-colors"
-                    >
-                      <FiPlus size={16} strokeWidth={3} />
-                    </button>
+                  <div className="w-full sm:w-auto mt-2 sm:mt-0 flex justify-between sm:justify-start items-center bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+                    <span className="sm:hidden font-black text-[#A0522D] text-sm">Total: ₹{item.price * item.quantity}</span>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => handleUpdateQuantity(item, -1)}
+                        className="p-1 text-[#6B3F1F] hover:bg-white rounded-lg transition-colors shadow-sm bg-white sm:bg-transparent sm:shadow-none border border-gray-200 sm:border-transparent"
+                      >
+                        <FiMinus size={14} strokeWidth={3} className="sm:w-4 sm:h-4" />
+                      </button>
+                      <span className="w-6 sm:w-8 text-center font-black text-[#6B3F1F] text-base sm:text-lg">{item.quantity}</span>
+                      <button 
+                        onClick={() => handleUpdateQuantity(item, 1)}
+                        className="p-1 text-[#6B3F1F] hover:bg-white rounded-lg transition-colors shadow-sm bg-white sm:bg-transparent sm:shadow-none border border-gray-200 sm:border-transparent"
+                      >
+                        <FiPlus size={14} strokeWidth={3} className="sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -180,7 +185,7 @@ function Cart() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-[#6B3F1F] p-8 rounded-[40px] text-[#FDF6EC] shadow-2xl sticky top-24">
+            <div className="bg-[#6B3F1F] p-6 sm:p-8 rounded-[30px] sm:rounded-[40px] text-[#FDF6EC] shadow-2xl sticky top-24">
               <h2 className="text-2xl font-black mb-6">Order Summary</h2>
               <div className="space-y-4 text-sm opacity-90">
                 <div className="flex justify-between font-medium">

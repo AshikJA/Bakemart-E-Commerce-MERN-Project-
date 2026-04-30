@@ -2,11 +2,12 @@ const Product = require('../models/ProductModel');
 const Order = require('../models/OrderModel');
 const User = require('../models/UserModel');
 
+
 class ProductService {
     static async getAllProducts(req, res) {
         const { category, search, minPrice, maxPrice, sort = '-createdAt' } = req.query;
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 50; // Increased default limit
+        const limit = parseInt(req.query.limit) || 50; 
         const skip = (page - 1) * limit;
 
         let query = {};
@@ -30,7 +31,8 @@ class ProductService {
         Product.find(query)
             .sort(sort)
             .skip(skip)
-            .limit(limit),
+            .limit(limit)
+            .lean(),
         Product.countDocuments(query)
         ]);
 
@@ -46,7 +48,7 @@ class ProductService {
     }
 
     static async getProductById(id) {
-        const product = await Product.findById(id);
+        const product = await Product.findById(id).lean();
         
         if (!product) {
         throw { status: 404, message: 'Product not found' };
@@ -139,6 +141,127 @@ class ProductService {
         await product.save();
         return { message: 'Review deleted successfully', product };
     }
+
+    static async getRelatedProducts(pid, cid) {
+  try {
+    const related = await Product.find({
+        category: cid,
+        _id: { $ne: pid }, 
+      })
+      .select("-photo") 
+      .limit(4)         
+      .populate("category")
+      .lean();
+
+    return {
+      success: true,
+      related,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error fetching related products",
+      error,
+    };
+  }
+};
+
+static async toggleWishlist(userId, productId) {
+  try {
+    if (!userId) throw { status: 401, message: 'User ID missing in token' };
+    const user = await User.findById(userId);
+    if (!user) throw { status: 404, message: 'User not found' };
+
+    const isAlreadyInWishlist = user.wishlist.includes(productId);
+
+    if (isAlreadyInWishlist) {
+      user.wishlist.pull(productId);
+      await user.save();
+      return { message: 'Product removed from wishlist successfully' };
+    } else {
+      user.wishlist.push(productId);
+      await user.save();
+      return { message: 'Product added to wishlist successfully' };
+    }
+  } catch (error) {
+    console.error('Error toggling wishlist:', error);
+    throw error.status ? error : { status: 500, message: 'Error toggling wishlist' };
+  }
+}
+
+static async getWishlist(userId) {
+  try {
+    if (!userId) throw { status: 401, message: 'User ID missing in token' };
+    const user = await User.findById(userId).populate('wishlist', 'name price images');
+    if (!user) throw { status: 404, message: 'User not found' };
+    return { wishlist: user.wishlist };
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    throw error.status ? error : { status: 500, message: 'Error fetching wishlist' };
+  }
+}
+
+static async filterProducts(filterData) {
+  try {
+    const { checked, radio, rating, search, category, page: p, limit: l } = filterData;
+    const page = parseInt(p) || 1;
+    const limit = parseInt(l) || 12;
+    const skip = (page - 1) * limit;
+
+    let args = {};
+
+    // Handles multiple categories (checkboxes)
+    if (checked && checked.length > 0) {
+      args.category = { $in: checked };
+    } 
+    // Handles single category (dropdown) - if checked is empty
+    else if (category && category !== 'All') {
+      args.category = category;
+    }
+
+    if (radio && radio.length === 2) {
+      args.price = { $gte: Number(radio[0]), $lte: Number(radio[1]) };
+    }
+
+    if (rating) {
+      args.rating = { $gte: Number(rating) };
+    }
+
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      args.name = { $regex: escapedSearch, $options: 'i' };
+    }
+
+    const [products, total] = await Promise.all([
+      Product.find(args)
+        .select("-images") // Optional: exclude images array if only single image needed, but usually images are fine.
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Product.countDocuments(args)
+    ]);
+
+    return {
+      success: true,
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    console.error('Filter products error:', error);
+    return {
+      success: false,
+      message: "Error filtering products",
+      error: error.message,
+    };
+  }
+}
+
 }
 
 module.exports = ProductService;

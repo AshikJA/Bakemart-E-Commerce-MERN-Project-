@@ -4,7 +4,7 @@ const Product = require('../models/ProductModel');
 class CartService { 
     static async getCart(userId) {
         try {
-            const cart = await Cart.findOne({ user: userId }).populate('items.product');
+            let cart = await Cart.findOne({ user: userId }).populate('items.product');
             if (!cart) {
                 try {
                     cart = await Cart.create({ user: userId, items: [] });
@@ -22,19 +22,25 @@ class CartService {
             throw error.status ? error : { status: 500, message: 'Error getting cart' };
         }
     }
-    static async addToCart(userId, productId, quantity = 1) {
+    static async addToCart(userId, productId, quantity = 1, variant = null) {
         try {
             const cart = await Cart.findOne({ user: userId });
             if (!cart) {
-                const newCart = new Cart({ user: userId, items: [{ product: productId, quantity }] });
+                const newCart = new Cart({ user: userId, items: [{ product: productId, quantity, selectedVariant: variant }] });
                 await newCart.save();
                 return newCart;
             }
-            const item = cart.items.find(item => item.product.toString() === productId);
+            
+            const variantName = variant ? variant.name : null;
+            const item = cart.items.find(item => 
+                item.product.toString() === productId && 
+                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant)
+            );
+
             if (item) {
                 item.quantity += quantity;
             } else {
-                cart.items.push({ product: productId, quantity });
+                cart.items.push({ product: productId, quantity, selectedVariant: variant });
             }
             await cart.save();
             return cart;
@@ -44,13 +50,19 @@ class CartService {
         }
     }
 
-    static async updateQuantity(userId, productId, quantity = 1) {
+    static async updateQuantity(userId, productId, quantity = 1, variant = null) {
         try {
             const cart = await Cart.findOne({ user: userId });
             if (!cart) {
                 throw { status: 404, message: 'Cart not found' };
             }
-            const item = cart.items.find(item => item.product.toString() === productId);
+            
+            const variantName = variant ? variant.name : null;
+            const item = cart.items.find(item => 
+                item.product.toString() === productId && 
+                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant)
+            );
+
             if (!item) {
                 throw { status: 404, message: 'Item not found in cart' };
             }
@@ -63,13 +75,16 @@ class CartService {
         }
     }
 
-    static async removeFromCart(userId, productId) {
+    static async removeFromCart(userId, productId, variantName = null) {
         try {
             const cart = await Cart.findOne({ user: userId });
             if (!cart) {
                 throw { status: 404, message: 'Cart not found' };
             }
-            cart.items = cart.items.filter(item => item.product.toString() !== productId);
+            cart.items = cart.items.filter(item => 
+                !(item.product.toString() === productId && 
+                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant))
+            );
             await cart.save();
             return cart;
         } catch (error) {
@@ -95,14 +110,25 @@ class CartService {
 
     static async mergeCart(userId, localCart) {
         try {
+            const validItems = localCart.filter(item => item.product).map(item => ({
+                product: item.product?._id || item.product,
+                quantity: item.quantity || 1,
+                selectedVariant: item.selectedVariant || null
+            }));
             const cart = await Cart.findOne({ user: userId });
             if (!cart) {
-                const newCart = new Cart({ user: userId, items: localCart });
+                const newCart = new Cart({ user: userId, items: validItems });
                 await newCart.save();
                 return newCart;
             }
-            for (const localItem of localCart) {
-                const item = cart.items.find(item => item.product.toString() === localItem.product);
+            if (validItems.length === 0) {
+                return cart;
+            }
+            for (const localItem of validItems) {
+                const item = cart.items.find(item => 
+                    item.product.toString() === localItem.product && 
+                    (localItem.selectedVariant ? item.selectedVariant?.name === localItem.selectedVariant.name : !item.selectedVariant)
+                );
                 if (item) {
                     item.quantity += localItem.quantity;
                 } else {

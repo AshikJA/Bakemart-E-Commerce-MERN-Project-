@@ -4,7 +4,8 @@ const {
   forgotPasswordSchema, 
   resetPasswordSchema,
   updateProfileSchema,
-  addressSchema 
+  addressSchema,
+  changePasswordSchema 
 } = require('../utils/validation');
 const UserService = require('../services/UserService');
 
@@ -20,7 +21,7 @@ class UserController extends BaseController {
   static loginUser = BaseController.asyncHandler(async (req, res) => {
     const validatedData = BaseController.loginValidation(req.body)
     const result = await UserService.loginUser(validatedData)
-    return res.status(201).json(result)
+    return res.status(200).json(result)
   })
 
   static verifyOtp = BaseController.asyncHandler(async (req, res) => {
@@ -72,6 +73,12 @@ class UserController extends BaseController {
   static updateAddress = BaseController.asyncHandler(async (req, res) => {
     const validatedData = BaseController.validateRequest(addressSchema, req.body);
     const result = await UserService.updateAddress(req.user.id, req.params.id, validatedData);
+    return res.status(200).json(result);
+  });
+
+  static changePassword = BaseController.asyncHandler(async (req, res) => {
+    const validatedData = BaseController.validateRequest(changePasswordSchema, req.body);
+    const result = await UserService.changePassword(req.user.id, validatedData);
     return res.status(200).json(result);
   });
 }

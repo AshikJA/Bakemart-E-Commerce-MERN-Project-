@@ -5,6 +5,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import PublicRoute from '../components/PublicRoute'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer' 
+import Chatbot from '../components/Chatbot'
 import Loading from '../components/Loading' 
 
 const Home = lazy( () => import( '../pages/user/Home'))
@@ -21,6 +22,9 @@ const OrderConfirmation = lazy( () => import( '../pages/user/OrderConfirmation')
 const ViewOrders = lazy( () => import( '../pages/user/ViewOrders'))  
 const Wallet = lazy( () => import( '../pages/user/Wallet'))
 const VerifyOtp = lazy( () => import( '../pages/user/VerifyOtp'))
+const WishList = lazy( () => import( '../pages/user/WishList'))
+const About = lazy( () => import( '../pages/user/About'))
+const Contact = lazy( () => import( '../pages/user/Contact'))
 
 function UsersRoutes() {
   return (
@@ -41,14 +45,15 @@ function UsersRoutes() {
             <Route path="view-orders" element={<ProtectedRoute><ViewOrders /></ProtectedRoute>} />      
             <Route path="wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />      
             <Route path="verify-otp" element={<VerifyOtp />} />
+            <Route path="wishlist" element={<ProtectedRoute><WishList /></ProtectedRoute>} />
             
             {/* Nav Links mapping to Home */}
-            <Route path="shop" element={<Home />} />
-            <Route path="hampers" element={<Home />} />
-            <Route path="cakes" element={<Home />} />
+            <Route path="about" element={<About />} />
+            <Route path="contact" element={<Contact />} />
             <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />
+        <Chatbot />
       </Suspense>
     </div>
   )

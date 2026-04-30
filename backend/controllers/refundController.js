@@ -18,8 +18,8 @@ const initiateRefund = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    if (order.paymentStatus !== 'paid' && order.paymentMethod !== 'COD') {
-      return res.status(400).json({ message: 'Only paid orders can be refunded' });
+    if (order.paymentStatus !== 'paid' || order.paymentMethod === 'COD') {
+      return res.status(400).json({ message: 'Only paid online orders can be refunded via Razorpay' });
     }
 
     if (!order.razorpayPaymentId) {
@@ -58,7 +58,6 @@ const initiateRefund = async (req, res) => {
 
     await order.save();
 
-    // Send email to customer
     try {
       await sendRefundEmail(order.user.email, order.totalAmount, refundResponse.id);
     } catch (emailError) {
@@ -81,7 +80,6 @@ const getRefundStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Check permissions: user must own the order or be an admin
     const isAdmin = (req.tokenType === 'admin') || (req.user && req.user.role === 'admin');
     if (order.user.toString() !== req.userId && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized to view this refund status' });
@@ -91,10 +89,8 @@ const getRefundStatus = async (req, res) => {
       return res.status(200).json({ initiated: false });
     }
 
-    // Fetch live status from Razorpay
     const refund = await razorpay.refunds.fetch(order.refund.razorpayRefundId);
 
-    // Update internal status if changed
     let updated = false;
     if (refund.status === 'processed' && order.refund.status !== 'processed') {
       order.refund.status = 'processed';
@@ -143,10 +139,8 @@ const webhookHandler = async (req, res) => {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     const signature = req.headers['x-razorpay-signature'];
 
-    // For signature verification, we need the raw body
-    // Since we'll configure server.js to provide raw body for this route
     const shasum = crypto.createHmac('sha256', secret);
-    shasum.update(req.body); // req.body should be the raw buffer
+    shasum.update(req.body); 
     const digest = shasum.digest('hex');
 
     if (digest !== signature) {

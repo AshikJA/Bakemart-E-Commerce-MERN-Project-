@@ -28,6 +28,7 @@ const addProductSchema = Joi.object({
   description: Joi.string().required(),
   category: Joi.string().required(),
   stock: Joi.number().required(),
+  weight: Joi.string().allow('', null).optional(),
   image: Joi.string().optional(),
   images: Joi.array().items(Joi.string()).optional(),
   variantType: Joi.string().valid('weight', 'size', 'flavor', 'none').optional(),
@@ -61,6 +62,12 @@ const addressSchema = Joi.object({
   isDefault: Joi.boolean()
 });
 
+const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().min(6).required(),
+  newPassword: Joi.string().min(6).required(),
+  confirmNewPassword: Joi.string().min(6).required()
+});
+
 module.exports = { 
   registerUserSchema, 
   loginUserSchema, 
@@ -69,5 +76,6 @@ module.exports = {
   addProductSchema, 
   addCategorySchema,
   updateProfileSchema,
-  addressSchema
+  addressSchema,
+  changePasswordSchema
 };

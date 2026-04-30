@@ -144,6 +144,81 @@ class AdminService {
       const recentUsers = await User.find({ role: 'user' }).sort({ createdAt: -1 }).limit(5);
       const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5).populate('user', 'name');
 
+      // Generate recent activity from orders, users, and products
+      const recentActivity = [];
+      const now = new Date();
+
+      // Add recent orders as activity
+      recentOrders.forEach(order => {
+        const timeDiff = now - new Date(order.createdAt);
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const days = Math.floor(hours / 24);
+        
+        let timeAgo;
+        if (days > 0) timeAgo = `${days} day${days > 1 ? 's' : ''} ago`;
+        else if (hours > 0) timeAgo = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        else timeAgo = 'Just now';
+
+        const customerName = order.user?.name || order.shippingAddress?.name || 'A customer';
+        
+        recentActivity.push({
+          type: 'order',
+          icon: 'order',
+          color: 'blue',
+          message: `New order ${order._id.toString().slice(-6)} from ${customerName}`,
+          time: timeAgo,
+          timestamp: order.createdAt,
+          status: order.orderStatus || 'pending',
+          amount: order.totalAmount
+        });
+      });
+
+      // Add recent users as activity
+      recentUsers.forEach(user => {
+        const timeDiff = now - new Date(user.createdAt);
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const days = Math.floor(hours / 24);
+        
+        let timeAgo;
+        if (days > 0) timeAgo = `${days} day${days > 1 ? 's' : ''} ago`;
+        else if (hours > 0) timeAgo = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        else timeAgo = 'Just now';
+
+        recentActivity.push({
+          type: 'user',
+          icon: 'user',
+          color: 'green',
+          message: `New user registered: ${user.name}`,
+          time: timeAgo,
+          timestamp: user.createdAt
+        });
+      });
+
+      // Add recent products as activity
+      recentProducts.forEach(product => {
+        const timeDiff = now - new Date(product.createdAt);
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const days = Math.floor(hours / 24);
+        
+        let timeAgo;
+        if (days > 0) timeAgo = `${days} day${days > 1 ? 's' : ''} ago`;
+        else if (hours > 0) timeAgo = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        else timeAgo = 'Just now';
+
+        recentActivity.push({
+          type: 'product',
+          icon: 'product',
+          color: 'purple',
+          message: `New product added: ${product.name}`,
+          time: timeAgo,
+          timestamp: product.createdAt
+        });
+      });
+
+      // Sort all activities by timestamp (most recent first) and take top 8
+      recentActivity.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const limitedActivity = recentActivity.slice(0, 8);
+
       return {
         stats: {
           users: { count: userCount, change: 'Total registered users' },
@@ -154,6 +229,7 @@ class AdminService {
         recentProducts,
         recentUsers,
         recentOrders,
+        recentActivity: limitedActivity,
       };
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

@@ -1,4 +1,4 @@
-const { loginUserSchema, addProductSchema, addCategorySchema, updateProfileSchema, addressSchema } = require('../utils/validation'); 
+const { loginUserSchema, addProductSchema, addCategorySchema, updateProfileSchema, addressSchema, changePasswordSchema   } = require('../utils/validation'); 
 const Product = require('../models/ProductModel');
 const User = require('../models/UserModel');
 
@@ -47,8 +47,17 @@ class BaseController {
     return value;
   }
 
-  static addproductValidation = (req) => {
-    const data = { ...req.body };
+  static addproductValidation = (reqOrData) => {
+    let data, req;
+    
+    if (reqOrData && reqOrData.files) {
+      req = reqOrData;
+      data = { ...req.body };
+    } else {
+      data = { ...reqOrData };
+      req = { files: [] };
+    }
+    
     if (data.weight === '') delete data.weight; 
 
     if (data.variants && typeof data.variants === 'string') {
@@ -63,20 +72,21 @@ class BaseController {
     }
     
     if (req.files && req.files.length > 0) {
-      data.images = req.files.map(f => f.filename);
-      data.image = req.files[0].filename;
+      data.images = req.files.map(f => f.path || f.filename);
+      data.image = req.files[0].path || req.files[0].filename;
     } 
     else if (data.images && typeof data.images === 'string') {
+      data.image = data.images;
       data.images = [data.images];
-      data.image = data.images[0];
     }
-    else if (Array.isArray(data.images) && data.images.every(img => typeof img === 'string')) {
+    else if (Array.isArray(data.images) && data.images.length > 0) {
       data.image = data.images[0];
     }
     else {
       data.images = [];
       data.image = '';
     }
+
     const { name, price, description, category, stock } = data;
     if (!name || !price || !description || !category || !stock) {
       throw { 
@@ -94,7 +104,7 @@ class BaseController {
         details: error.details
       };
     }
-    return { req, value };
+    return { req: reqOrData, value };
   }   
 
   static addCategoryValidation = (data) => {
@@ -130,4 +140,4 @@ class BaseController {
   }
 }
 
-module.exports = BaseController;
+module.exports = BaseController;

@@ -3,46 +3,28 @@ const User = require('../models/UserModel');
 const WalletController = require('./WalletController');
 const { sendRefundToWalletEmail, sendRefundChoiceEmail, sendBankRefundEmail } = require('../utils/mailer');
 
-// @desc    Submit return request
-// @route   POST /api/orders/:id/return
-// @access  Private
 const submitReturnRequest = async (req, res) => {
   try {
     const orderId = req.params.id;
     const userId = req.userId;
     const { reason } = req.body;
-
-    // Find order
     const order = await Order.findById(orderId);
-
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-
-    // Check if order belongs to user
     if (order.user.toString() !== userId) {
       return res.status(403).json({ message: 'Not authorized to return this order' });
     }
-
-    // Check if order is delivered
     if (order.orderStatus !== 'delivered') {
       return res.status(400).json({ message: 'Only delivered orders can be returned' });
     }
-
-    // Check if payment was successful
     if (order.paymentStatus !== 'paid' && order.paymentStatus !== 'refunded') {
       return res.status(400).json({ message: 'Only paid orders can be returned' });
     }
-
-    // Check if return already requested
     if (order.returnRequest && order.returnRequest.requested) {
       return res.status(400).json({ message: 'Return request already submitted for this order' });
     }
-
-    // Get image paths
     const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
-
-    // Create return request
     order.returnRequest = {
       requested: true,
       reason: reason || 'No reason provided',
@@ -63,20 +45,13 @@ const submitReturnRequest = async (req, res) => {
   }
 };
 
-// @desc    Get all return requests (admin)
-// @route   GET /api/admin/returns
-// @access  Private/Admin
 const getReturnRequests = async (req, res) => {
   try {
     const { status } = req.query;
-
-    // Build query
     const query = { 'returnRequest.requested': true };
     if (status && status !== 'all') {
       query['returnRequest.status'] = status;
     }
-
-    // Find orders with return requests
     const orders = await Order.find(query)
       .populate('user', 'name email phone')
       .select('user items totalAmount shippingAddress paymentStatus orderStatus returnRequest createdAt')
@@ -93,22 +68,14 @@ const getReturnRequests = async (req, res) => {
   }
 };
 
-// @desc    Update return status (admin)
-// @route   PUT /api/admin/returns/:id
-// @access  Private/Admin
 const updateReturnStatus = async (req, res) => {
   try {
     const orderId = req.params.id;
     const { status, adminNote } = req.body;
-
-    // Validate status
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ message: 'Status must be approved or rejected' });
     }
-
-    // Find order
     const order = await Order.findById(orderId);
-
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -116,31 +83,20 @@ const updateReturnStatus = async (req, res) => {
     if (!order.returnRequest || !order.returnRequest.requested) {
       return res.status(400).json({ message: 'No return request found for this order' });
     }
-
-    // Update return request status
     order.returnRequest.status = status;
     order.returnRequest.adminNote = adminNote || '';
     order.returnRequest.resolvedAt = new Date();
-
-    // Logic for refund processing on approval
     if (status === 'approved') {
       order.orderStatus = 'returned';
-      
-      // Auto-credit wallet for Online payments (UPI/Razorpay) or Partial Wallet orders
       if (order.paymentMethod !== 'COD') {
         try {
-          // Calculate refund amount (Total Price)
           const refundAmount = order.totalAmount;
-          
-          // Credit wallet using static helper
           await WalletController.creditWallet(
             order.user,
             refundAmount,
             `Refund for Order #${order._id.toString()}`,
             order._id
           );
-
-          // Update refund status in order
           order.refund = {
             initiated: true,
             method: 'wallet',
@@ -150,20 +106,17 @@ const updateReturnStatus = async (req, res) => {
             processedAt: new Date()
           };
           order.paymentStatus = 'refunded';
-
-          // Send confirmation email
           const userObj = await User.findById(order.user).select('email name walletBalance');
           if (userObj) {
             await sendRefundToWalletEmail(userObj.email, refundAmount, userObj.walletBalance, order._id);
           }
         } catch (walletError) {
           console.error('Error auto-crediting wallet:', walletError);
-          // If wallet credit fails, set to pending for manual check
           order.refund.status = 'failed';
           order.refund.failureReason = 'Internal wallet credit failure';
         }
       } else {
-        // For COD: Set pendingMethod flag and prompt user via email for choice
+        if (!order.refund) order.refund = {};
         order.refund.pendingMethod = true;
         order.refund.amount = order.totalAmount;
         order.refund.status = 'pending';
@@ -192,9 +145,6 @@ const updateReturnStatus = async (req, res) => {
   }
 };
 
-// @desc    User chooses refund method for COD return
-// @route   POST /api/orders/:id/refund-choice
-// @access  Private
 const handleRefundChoice = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -213,7 +163,6 @@ const handleRefundChoice = async (req, res) => {
     }
 
     if (choice === 'wallet') {
-      // Credit wallet
       const refundAmount = order.totalAmount;
       const newBalance = await WalletController.creditWallet(
         userId,
@@ -234,7 +183,6 @@ const handleRefundChoice = async (req, res) => {
       await order.save();
       return res.status(200).json({ success: true, message: 'Refund credited to your wallet!', balance: newBalance });
     } else {
-      // choice === 'bank'
       if (!bankDetails || !bankDetails.accountNumber) {
         return res.status(400).json({ message: 'Bank details are required for bank transfer' });
       }
@@ -259,9 +207,6 @@ const handleRefundChoice = async (req, res) => {
   }
 };
 
-// @desc    Get logged in user's return requests
-// @route   GET /api/orders/my-returns
-// @access  Private
 const getMyReturns = async (req, res) => {
   try {
     const userId = req.userId;

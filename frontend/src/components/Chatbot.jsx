@@ -133,7 +133,7 @@ export default function Chatbot() {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+        className="fixed bottom-15 right-6 z-[60] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
         style={{ background: 'linear-gradient(135deg, #6B3F1F, #A0522D)' }}
       >
         {isOpen ? (
@@ -152,7 +152,7 @@ export default function Chatbot() {
 
       {/* Chatbox Popup */}
       <div
-        className={`fixed bottom-24 right-6 z-50 w-80 md:w-96 flex flex-col rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 origin-bottom-right ${
+        className={`fixed bottom-20 right-4 md:right-6 z-[60] w-[calc(100vw-2rem)] md:w-96 flex flex-col rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 origin-bottom-right ${
           isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
         style={{ height: '500px', background: '#FFFDF9' }}

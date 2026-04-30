@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiShoppingCart, FiZap } from 'react-icons/fi';
 import { addToCart } from '../utils/cartUtils';
 import { toast } from 'react-toastify';
 import api from '../api/client';
+import { Tooltip } from 'react-tooltip';
 
-const ProductCard = ({ product }) => {
+const ProductCard = memo(({ product }) => {
   const navigate = useNavigate();
   const [selectedVariant, setSelectedVariant] = React.useState(null);
 
@@ -16,19 +17,19 @@ const ProductCard = ({ product }) => {
     }
   }, [product]);
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product, 1, selectedVariant);
     toast.success(`${product.name}${selectedVariant ? ` (${selectedVariant.name})` : ''} added to cart!`);
-  };
+  }, [product, selectedVariant]);
 
-  const handleBuyNow = (e) => {
+  const handleBuyNow = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product, 1, selectedVariant);
     navigate('/checkout');
-  };
+  }, [product, selectedVariant, navigate]);
 
   const currentPrice = selectedVariant ? selectedVariant.price : product.price;
   const currentStock = selectedVariant ? selectedVariant.stock : product.stock;
@@ -69,9 +70,20 @@ const ProductCard = ({ product }) => {
         </div>
         
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#D4A96A]/10">
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</span>
-            <div className="text-xl sm:text-2xl font-black text-[#6B3F1F]">
+            <div className="text-xl sm:text-2xl font-black text-[#6B3F1F] truncate" title={
+              product.variants && product.variants.length > 0 ? (
+                (() => {
+                  const prices = product.variants.map(v => v.price);
+                  const min = Math.min(...prices);
+                  const max = Math.max(...prices);
+                  return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
+                })()
+              ) : (
+                `₹${product.price}`
+              )
+            }>
               {product.variants && product.variants.length > 0 ? (
                 <>
                   {(() => {
@@ -86,25 +98,32 @@ const ProductCard = ({ product }) => {
               )}
             </div>
           </div>
-          <button 
-            onClick={handleAddToCart}
-            disabled={currentStock === 0}
-            className="p-3.5 bg-[#6B3F1F] text-[#FDF6EC] rounded-2xl hover:bg-[#A0522D] transition-all active:scale-95 shadow-md hover:shadow-xl disabled:opacity-50 disabled:grayscale"
-          >
-            <FiShoppingCart size={20} />
-          </button>
-          <button 
-            onClick={handleBuyNow}
-            disabled={currentStock === 0}
-            className="p-3.5 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-all active:scale-95 shadow-md hover:shadow-xl disabled:opacity-50 disabled:grayscale"
-            title="Buy Now"
-          >
-            <FiZap size={20} />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <button 
+              onClick={handleAddToCart}
+              disabled={currentStock === 0}
+              className="p-3.5 bg-[#6B3F1F] text-[#FDF6EC] rounded-2xl hover:bg-[#A0522D] transition-all active:scale-95 shadow-md hover:shadow-xl disabled:opacity-50 disabled:grayscale"
+              data-tooltip-id="add-to-cart-tooltip"
+              data-tooltip-content="Add to Cart"
+            >
+              <FiShoppingCart size={20} />
+            </button>
+            <button 
+              onClick={handleBuyNow}
+              disabled={currentStock === 0}
+              className="p-3.5 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-all active:scale-95 shadow-md hover:shadow-xl disabled:opacity-50 disabled:grayscale"
+              data-tooltip-id="buy-now-tooltip"
+              data-tooltip-content="Buy Now"
+            >
+              <FiZap size={20} />
+            </button>
+            <Tooltip id="add-to-cart-tooltip" />
+            <Tooltip id="buy-now-tooltip" />
+          </div>
         </div>
       </div>
     </div>
   );
-};
+});
 
 export default ProductCard;

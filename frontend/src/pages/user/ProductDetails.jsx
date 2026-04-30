@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
-import { FiShoppingCart, FiArrowLeft, FiPlus, FiMinus, FiTruck, FiShield, FiHeart, FiZap, FiRefreshCw, FiLock, FiStar, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { LuHeart } from "react-icons/lu";
+import { FiShoppingCart, FiArrowLeft, FiPlus, FiMinus, FiTruck, FiShield, FiZap, FiRefreshCw, FiLock, FiStar, FiEdit2, FiTrash2, FiMapPin } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 import { addToCart } from '../../utils/cartUtils';
 import { toast } from 'react-toastify';
 import { isUserAuthenticated, getUserId } from '../../utils/auth';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import { Tooltip } from 'react-tooltip';
 
 function ProductDetails() {
   const { id } = useParams();
@@ -15,11 +21,16 @@ function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
-
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState(null);
+  const [pincode, setPincode] = useState('');
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
+  const [deliveryEstimate, setDeliveryEstimate] = useState(null);
+  const [deliveryError, setDeliveryError] = useState('');
 
   const loggedInUserId = getUserId();
   const isLoggedIn = isUserAuthenticated();
@@ -36,6 +47,29 @@ function ProductDetails() {
       setSelectedVariant(null);
     }
   }, [product]);
+
+  useEffect(() => {
+    if (product?._id && product?.category) {
+      const categoryId = typeof product.category === 'object' ? product.category._id : product.category;
+      const pid = typeof product._id === 'object' ? product._id : product._id;
+      fetchRelatedProducts(pid, categoryId);
+    }
+  }, [product]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchWishlist();
+    }
+  }, [isLoggedIn]);
+
+  const fetchWishlist = async () => {
+    try {
+      const response = await api.get('/products/wishlist');
+      setWishlist(response.data.wishlist);
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+    }
+  };
 
   const fetchProduct = async () => {
     try {
@@ -146,6 +180,64 @@ function ProductDetails() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete review');
     }
+  };
+
+  const fetchRelatedProducts = async (pid, cid) => {
+    try {
+      const response = await api.get(`/products/related-product/${pid}/${cid}`);
+      setRelatedProducts(response.data?.related || []);
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+    }
+  };
+
+  const handleToggleWishlist = async (pid) => {
+    try {
+      const {data} = await api.put(`/products/wishlist/${pid}`)
+      toast.success(data.message)
+      fetchWishlist();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update wishlist');
+    }
+  }
+
+  const checkDeliveryByPincode = async (p) => {
+    const currentPincode = String(p || '').trim();
+    
+    if (!currentPincode || currentPincode.length !== 6) {
+      setDeliveryError('Please enter a valid 6-digit pincode');
+      return;
+    }
+
+    setDeliveryError('');
+    setDeliveryEstimate(null);
+    setCheckingDelivery(true);
+    
+    try {
+      const response = await api.post('/shipping/check-delivery', { 
+        pincode: currentPincode, 
+        weight: product.weight  
+      });
+      
+      if (response.data.success) {
+        if (response.data.available) {
+          setDeliveryEstimate(response.data.deliveryEstimate);
+        } else {
+          setDeliveryError(response.data.message || 'Delivery not available');
+        }
+      } else {
+        setDeliveryError('Unable to check delivery. Please try again.');
+      }
+    } catch (error) {
+      setDeliveryError(error.response?.data?.message || 'Failed to check delivery');
+    } finally {
+      setCheckingDelivery(false);
+    }
+  };
+
+  const checkDelivery = async (e) => {
+    if (e) e.preventDefault();
+    checkDeliveryByPincode(pincode);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#FDF6EC]">Loading deliciousness...</div>;
@@ -307,45 +399,175 @@ function ProductDetails() {
                     <FiZap size={24} />
                     Buy Now
                 </button>
-                <button className="p-4 sm:p-5 bg-white text-[#6B3F1F] rounded-2xl sm:rounded-[25px] shadow-lg border border-[#D4A96A]/20 hover:text-red-500 transition-colors flex items-center justify-center">
-                    <FiHeart size={24} />
+                <button data-tooltip-id="wishlist-tooltip" data-tooltip-content="Wishlist" onClick={() => handleToggleWishlist(product._id)} className="p-4 sm:p-5 bg-white text-[#6B3F1F] rounded-2xl sm:rounded-[25px] shadow-lg border border-[#D4A96A]/20 hover:text-red-500 transition-colors flex items-center justify-center">
+                    {wishlist.find(iteam => iteam._id === product._id) ? (
+                        <LuHeart size={24} className="text-red-500 fill-red-500" />
+                    ) : (
+                        <LuHeart size={24} className="text-red-500" />
+                    )}
                 </button>
+                <Tooltip id="wishlist-tooltip" />
             </div>
           </div>
 
           {/* Badges */}
-          <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 pt-4 sm:pt-6">
-             <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/50 border border-[#D4A96A]/10">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl flex-shrink-0"><FiTruck size={24} /></div>
-                <div>
-                    <h4 className="font-bold text-[#6B3F1F] text-sm">Fast Delivery</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">Scheduled Shipping</p>
+          <div className="flex flex-wrap justify-center gap-3 pt-4 sm:pt-6">
+             <div className="flex items-center gap-2 p-2 sm:p-3 rounded-2xl sm:rounded-3xl bg-white/50 border border-[#D4A96A]/10">
+                <div className="p-2 sm:p-2.5 bg-blue-100 text-blue-600 rounded-xl sm:rounded-2xl flex-shrink-0"><FiTruck size={18} /></div>
+                <div className="text-center">
+                    <h4 className="font-bold text-[#6B3F1F] text-[10px] sm:text-xs">Fast Delivery</h4>
+                    <p className="text-[8px] sm:text-[10px] text-gray-500 hidden sm:block">Scheduled Shipping</p>
                 </div>
              </div>
-             <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/50 border border-[#D4A96A]/10">
-               <div className="p-3 bg-yellow-100 text-yellow-600 rounded-2xl flex-shrink-0"><FiShield size={24} /></div>
-                 <div>
-                    <h4 className="font-bold text-[#6B3F1F] text-sm">Quality</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">Handcrafted Excellence</p>
+             <div className="flex items-center gap-2 p-2 sm:p-3 rounded-2xl sm:rounded-3xl bg-white/50 border border-[#D4A96A]/10">
+               <div className="p-2 sm:p-2.5 bg-yellow-100 text-yellow-600 rounded-xl sm:rounded-2xl flex-shrink-0"><FiShield size={18} /></div>
+                 <div className="text-center">
+                    <h4 className="font-bold text-[#6B3F1F] text-[10px] sm:text-xs">Quality</h4>
+                    <p className="text-[8px] sm:text-[10px] text-gray-500 hidden sm:block">Handcrafted Excellence</p>
                 </div>
              </div>
-             <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/50 border border-[#D4A96A]/10">
-               <div className="p-3 bg-red-100 text-red-600 rounded-2xl flex-shrink-0"><FiRefreshCw size={24} /></div>
-                 <div>
-                    <h4 className="font-bold text-[#6B3F1F] text-sm">7 Days Return</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">This Product is Eligible for return or exchange within 7 days of delivery</p>
+             <div className="flex items-center gap-2 p-2 sm:p-3 rounded-2xl sm:rounded-3xl bg-white/50 border border-[#D4A96A]/10">
+               <div className="p-2 sm:p-2.5 bg-red-100 text-red-600 rounded-xl sm:rounded-2xl flex-shrink-0"><FiRefreshCw size={18} /></div>
+                 <div className="text-center">
+                    <h4 className="font-bold text-[#6B3F1F] text-[10px] sm:text-xs">7 Days Return</h4>
+                    <p className="text-[8px] sm:text-[10px] text-gray-500 hidden sm:block">Eligible for return</p>
                 </div>
              </div>
-             <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/50 border border-[#D4A96A]/10">
-               <div className="p-3 bg-green-100 text-green-600 rounded-2xl flex-shrink-0"><FiLock size={24} /></div>
-                 <div>
-                    <h4 className="font-bold text-[#6B3F1F] text-sm">Secure Payment</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">All transactions are secure and encrypted</p>
+             <div className="flex items-center gap-2 p-2 sm:p-3 rounded-2xl sm:rounded-3xl bg-white/50 border border-[#D4A96A]/10">
+               <div className="p-2 sm:p-2.5 bg-green-100 text-green-600 rounded-xl sm:rounded-2xl flex-shrink-0"><FiLock size={18} /></div>
+                 <div className="text-center">
+                    <h4 className="font-bold text-[#6B3F1F] text-[10px] sm:text-xs">Secure Payment</h4>
+                    <p className="text-[8px] sm:text-[10px] text-gray-500 hidden sm:block">Encrypted</p>
                 </div>
              </div>
           </div>
+
+          {/* Check Delivery Estimate */}
+          <div className="mt-6 p-4 bg-white rounded-2xl border border-[#D4A96A]/20">
+            <div className="flex items-center gap-2 mb-3">
+              <FiMapPin className="text-[#6B3F1F]" size={18} />
+              <h4 className="font-bold text-[#6B3F1F] text-sm">Check Delivery</h4>
+            </div>
+            <form onSubmit={checkDelivery} className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={pincode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setPincode(val);
+                    if (val.length === 6) {
+                      checkDeliveryByPincode(val);
+                    }
+                  }}
+                  placeholder="Enter 6-digit pincode"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#D4A96A]/30 bg-[#FDF6EC] text-[#6B3F1F] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#D4A96A] text-sm font-medium"
+                  maxLength={6}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={checkingDelivery || pincode.length !== 6}
+                className="px-6 py-2.5 bg-[#6B3F1F] text-white rounded-xl font-bold text-sm hover:bg-[#A0522D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {checkingDelivery ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Checking...
+                  </span>
+                ) : (
+                  'Check'
+                )}
+              </button>
+            </form>
+
+            {deliveryError && (
+              <p className="mt-3 text-red-500 text-xs font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                {deliveryError}
+              </p>
+            )}
+
+            {deliveryEstimate && (
+              <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <FiTruck className="text-white" size={14} />
+                  </div>
+                  <span className="font-bold text-green-700 text-sm">Estimated Delivery</span>
+                </div>
+                <p className="text-green-800 font-black text-lg">
+                  {deliveryEstimate.dateRange}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                    {deliveryEstimate.courierName}
+                  </span>
+                  {deliveryEstimate.deliveryInfo && (
+                    <span className="text-xs text-green-600 font-medium">
+                      {deliveryEstimate.deliveryInfo}
+                    </span>
+                  )}
+                  {deliveryEstimate.isCODAvailable && (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                      COD Available
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+
+      {/* Related Products */}
+      {relatedProducts.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-16 lg:mt-24">
+          <h3 className="text-2xl sm:text-3xl font-black text-[#6B3F1F] mb-8">Similar Products</h3>
+          <Swiper
+            modules={[Navigation, Autoplay]}
+            navigation
+            autoplay={{ delay: 4000, disableOnInteraction: false }}
+            spaceBetween={16}
+            slidesPerView={1.5}
+            breakpoints={{
+              640: { slidesPerView: 2.5, spaceBetween: 24 },
+              1024: { slidesPerView: 4, spaceBetween: 24 },
+            }}
+            className="pb-4"
+          >
+            {relatedProducts.map((p) => (
+              <SwiperSlide key={p._id}>
+                <div 
+                  onClick={() => navigate(`/product/${p.slug || p._id}`)}
+                  className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-[#D4A96A]/20 cursor-pointer hover:shadow-xl hover:scale-105 transition-all group h-full flex flex-col"
+                >
+                  <div className="relative bg-[#FDF6EC] p-4 sm:p-6">
+                    <img
+                      src={
+                        (p.images && p.images.length > 0)
+                          ? (p.images[0].startsWith('http') ? p.images[0] : `${api.defaults.baseURL.replace('/api', '')}/uploads/${p.images[0]}`)
+                          : (p.image ? (p.image.startsWith('http') ? p.image : `${api.defaults.baseURL.replace('/api', '')}/uploads/${p.image}`) : 'https://via.placeholder.com/400x400?text=Chocolate')
+                      }
+                      alt={p.name}
+                      className="w-full h-32 sm:h-48 object-cover rounded-xl sm:rounded-2xl"
+                    />
+                  </div>
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                    <h5 className="font-bold text-[#6B3F1F] text-sm sm:text-base truncate">{p.name}</h5>
+                    <p className="text-gray-500 text-[10px] sm:text-xs mt-1 line-clamp-2">{p.description?.substring(0, 50)}...</p>
+                    <div className="mt-auto pt-3 flex items-center justify-between">
+                      <span className="font-black text-[#A0522D] text-lg sm:text-xl">₹{p.price}</span>
+                      <span className="text-xs font-bold text-gray-400 group-hover:text-[#A0522D] transition-colors">View</span>
+                    </div>
+                  </div>
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+      )}
 
       {/* Reviews Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-16 lg:mt-24">

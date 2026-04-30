@@ -18,15 +18,25 @@ function AddProducts() {
   const [images, setImages] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [previews, setPreviews] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const [variantType, setVariantType] = useState(editProduct?.variantType || 'none');
   const [variants, setVariants] = useState(editProduct?.variants || []);
 
   useEffect(() => {
     fetchCategories();
+    if (editProduct) {
+      if (editProduct.images && editProduct.images.length > 0) {
+        setPreviews(editProduct.images.map(url => ({ type: 'url', data: url })));
+        setExistingImages(editProduct.images);
+        setImageUrl(editProduct.images[0]);
+      }
+      if (editProduct.variants) {
+        setVariants(editProduct.variants);
+      }
+    }
   }, []);
 
   const fetchCategories = async () => {
@@ -40,58 +50,62 @@ function AddProducts() {
 
   const onFileChange = (e) => {
     const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     
-    setImages(prevImages => {
-      const combinedFiles = [...prevImages, ...files].slice(0, 5); // Limit to 5
-      if (combinedFiles.length > 0) {
-        setImageUrl(''); 
-        
-        const newPreviews = [];
-        combinedFiles.forEach(file => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            newPreviews.push(reader.result);
-            if (newPreviews.length === combinedFiles.length) {
-              setPreviews([...newPreviews]); 
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-      }
-      return combinedFiles;
+    const currentTotal = existingImages.length + images.length;
+    const availableSlots = 5 - currentTotal;
+    
+    if (availableSlots <= 0) {
+      toast.warning('Maximum 5 images allowed');
+      return;
+    }
+    
+    const filesToAdd = files.slice(0, availableSlots);
+    
+    setImageUrl('');
+    
+    const newPreviews = [];
+    let loadedCount = 0;
+    
+    filesToAdd.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push({ type: 'file', data: reader.result });
+        loadedCount++;
+        if (loadedCount === filesToAdd.length) {
+          setPreviews(prev => [...prev, ...newPreviews].slice(0, 5));
+          setImages(prev => [...prev, ...filesToAdd].slice(0, 5));
+        }
+      };
+      reader.readAsDataURL(file);
     });
   };
 
   const removeImage = (indexToRemove) => {
-    setImages(prevImages => {
-      const remainingFiles = prevImages.filter((_, idx) => idx !== indexToRemove);
-      
-      if (remainingFiles.length === 0) {
-        setPreviews([]);
-        return [];
-      }
-      
-      const newPreviews = [];
-      remainingFiles.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newPreviews.push(reader.result);
-          if (newPreviews.length === remainingFiles.length) {
-            setPreviews([...newPreviews]); 
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-      
-      return remainingFiles;
-    });
+    const totalExistingImages = existingImages.length;
+    
+    if (indexToRemove < totalExistingImages) {
+      const newExisting = existingImages.filter((_, idx) => idx !== indexToRemove);
+      setExistingImages(newExisting);
+      const newPreviews = previews.filter((_, idx) => idx !== indexToRemove);
+      setPreviews(newPreviews);
+    } else {
+      const newFileIndex = indexToRemove - totalExistingImages;
+      setImages(prevImages => prevImages.filter((_, idx) => idx !== newFileIndex));
+      const newPreviews = previews.filter((_, idx) => idx !== indexToRemove);
+      setPreviews(newPreviews);
+    }
   };
 
   const onUrlChange = (e) => {
     const url = e.target.value;
     setImageUrl(url);
     setImages([]); 
-    setPreviews([url]);
+    if (existingImages.length > 0) {
+      setPreviews([...existingImages, { type: 'url', data: url }]);
+    } else {
+      setPreviews([{ type: 'url', data: url }]);
+    }
   };
 
   const addVariant = () => {
@@ -145,13 +159,18 @@ function AddProducts() {
     
     if (images.length > 0) {
       images.forEach(img => formData.append('images', img));
-    } else {
+      if (existingImages.length > 0) {
+        formData.append('existingImages', JSON.stringify(existingImages));
+      }
+    } else if (imageUrl) {
       formData.append('images', imageUrl);
+    } else if (editProduct && existingImages.length > 0) {
+      formData.append('existingImages', JSON.stringify(existingImages));
     }
 
     try {
       if (editProduct) {
-        await api.put(`/admin/products/${editProduct._id}`, formData);
+        await api.put(`/admin/update-product/${editProduct._id}`, formData);
         toast.success('Product updated successfully!');
       } else {
         await api.post('/admin/add-product', formData);
@@ -374,7 +393,7 @@ function AddProducts() {
                   <div className="flex gap-3 overflow-x-auto p-4 border border-gray-200 rounded-xl bg-white custom-scrollbar">
                     {previews.map((preview, idx) => (
                       <div key={idx} className="relative group flex-shrink-0">
-                         <img src={preview} alt={`preview ${idx}`} className="h-24 w-24 object-cover rounded-lg shadow-sm border border-gray-100" />
+                         <img src={preview.type === 'file' ? preview.data : preview.data} alt={`preview ${idx}`} className="h-24 w-24 object-cover rounded-lg shadow-sm border border-gray-100" />
                          <button 
                            type="button" 
                            onClick={() => removeImage(idx)} 

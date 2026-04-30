@@ -3,7 +3,7 @@ const config = require('../config/config');
 const User = require('../models/UserModel');
 const Address = require('../models/AddressModel');
 const { generateToken } = require('../utils/jwt');
-const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer');
+const { sendOtpEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/mailer');
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString(); // "123456"
@@ -29,6 +29,7 @@ class UserService {
       user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
       await user.save();
       await sendOtpEmail(user.email, otp);
+      await sendWelcomeEmail(user.email, user.name);
       return {
         message: 'Registration successful. OTP sent to your email.',
         email: user.email,
@@ -163,7 +164,7 @@ class UserService {
       };
     } catch (error) {
       console.error('Error fetching profile:', error);
-      throw { status: 500, message: 'Error fetching profile' };
+      throw error.status ? error : { status: 500, message: 'Error fetching profile' };
     }
   }
 
@@ -273,6 +274,28 @@ class UserService {
       throw error.status ? error : { status: 500, message: 'Error updating address' };
     }
   }
+
+static async changePassword(userId, data) {
+  try {
+    if (!userId) throw { status: 401, message: 'User ID missing in token' };
+    const user = await User.findById(userId).select('+password');
+    if (!user) throw { status: 404, message: 'User not found' };
+
+    const isPasswordValid = await user.comparePassword(data.currentPassword);
+    if (!isPasswordValid) throw { status: 401, message: 'Invalid current password' };
+
+    if (data.newPassword !== data.confirmNewPassword) throw { status: 400, message: 'Passwords do not match' };
+
+    user.password = data.newPassword;
+    await user.save();
+
+    return { message: 'Password changed successfully' };
+  } catch (error) {
+    console.error('Error changing password:', error);
+    throw error.status ? error : { status: 500, message: 'Error changing password' };
+  }
+}
+
 }
 
 module.exports = UserService;

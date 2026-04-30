@@ -1,13 +1,15 @@
 const errorHandler = (err, req, res, next) => {
-  console.error('Error stack:', err.stack || err);
+  console.error('Error:', err.message || err);
 
   let statusCode = err.status || 500;
   let message = err.message || 'Internal Server Error';
+  // details is an array of { field, message } from express-validator or Joi
   let details = err.details || null;
 
   if (err.name === 'ValidationError') {
-    statusCode = 400;
-    message = err.message || 'Validation Error';
+    // Use 422 for express-validator errors (already carries status), fallback 400 for Joi
+    statusCode = err.status || 422;
+    message = err.message || 'Validation failed';
   } else if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid token. Please log in again.';
@@ -15,8 +17,9 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 401;
     message = 'Token expired. Please log in again.';
   } else if (err.code === 11000) {
-    statusCode = 400;
-    message = 'Duplicate field value entered';
+    statusCode = 409;
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
   } else if (err.code === 'LIMIT_FILE_SIZE') {
     statusCode = 400;
     message = 'File size exceeds the maximum limit of 5MB';
@@ -28,13 +31,15 @@ const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
+    // field-level errors array — frontend can use this to highlight specific fields
     details,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
 
 const notFound = (req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
+  error.status = 404;
   res.status(404);
   next(error);
 };

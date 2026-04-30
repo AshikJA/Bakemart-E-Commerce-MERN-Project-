@@ -18,6 +18,7 @@ const RevenueOverview = lazy( () => import( '../pages/admin/RevenueOverview'))
 const SalesReport = lazy( () => import( '../pages/admin/SalesReport'))
 const ReturnRequests = lazy( () => import( '../pages/admin/ReturnRequests'))
 const RefundsList = lazy( () => import( '../pages/admin/RefundsList'))
+const AdminBanners = lazy( () => import( '../pages/admin/AdminBanners'))
 
 function AdminRoutes() {
   return (
@@ -36,6 +37,7 @@ function AdminRoutes() {
             <Route path="sales-report" element={<ProtectedRoute requireAdmin={true}><SalesReport /></ProtectedRoute>} />
             <Route path="returns" element={<ProtectedRoute requireAdmin={true}><ReturnRequests /></ProtectedRoute>} />
             <Route path="refunds" element={<ProtectedRoute requireAdmin={true}><RefundsList /></ProtectedRoute>} />
+            <Route path="banners" element={<ProtectedRoute requireAdmin={true}><AdminBanners /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
 
         </Routes>

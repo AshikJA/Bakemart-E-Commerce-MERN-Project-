@@ -68,8 +68,6 @@ export default function AdminOrders() {
     return order.orderStatus === activeFilter;
   });
 
-  // const pendingCount = orders.filter(order => order.orderStatus === 'pending').length;
-
   const handleStatusClick = (order) => {
     setStatusHistoryOrder(order);
     setShowStatusHistory(true);
@@ -184,12 +182,12 @@ export default function AdminOrders() {
               </span>
           </div>
           {/*Filter Tabs*/} 
-          <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex gap-2">
+          <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'].map(filter => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
+              className={`flex-shrink-0 py-3 px-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
                 activeFilter === filter 
                   ? 'bg-[#6B3F1F] text-white shadow-md' 
                   : 'text-slate-600 hover:bg-slate-50'

@@ -29,6 +29,26 @@ class ProductController extends BaseController {
     const result = await ProductService.deleteProductReview(req.params.id, req.params.reviewId, req.userId);
     return res.status(200).json(result);
   });
+
+  static getRelatedProducts = BaseController.asyncHandler(async (req, res) => {
+    const result = await ProductService.getRelatedProducts(req.params.pid, req.params.cid);
+    return res.status(200).json(result);
+  });
+
+  static toggleWishlistController = BaseController.asyncHandler(async (req, res) => {
+    const result = await ProductService.toggleWishlist(req.userId, req.params.id);
+    return res.status(200).json(result);
+  });
+
+  static getWishlistController = BaseController.asyncHandler(async (req, res) => {
+    const result = await ProductService.getWishlist(req.userId);
+    return res.status(200).json(result);
+  });
+
+  static filterProducts = BaseController.asyncHandler(async (req, res) => {
+    const result = await ProductService.filterProducts({ ...req.body, ...req.query });
+    return res.status(200).json(result);
+  });
 }
 
 module.exports = ProductController;

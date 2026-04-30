@@ -3,7 +3,7 @@ import api from '../../api/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getCart, clearCart } from '../../utils/cartUtils';
-import { FiCheckCircle, FiPlus, FiArrowLeft, FiEdit2, FiX, FiPocket, FiLoader } from 'react-icons/fi';
+import { FiCheckCircle, FiPlus, FiArrowLeft, FiEdit2, FiX, FiPocket, FiLoader, FiTruck, FiMapPin } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import useDebounce from '../../hooks/useDebounce';
 import usePincode from '../../hooks/usePincode';
@@ -26,6 +26,9 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [useWallet, setUseWallet] = useState(false);
   const { walletBalance, refreshWallet } = useAuth();
+  
+  const [deliveryEstimate, setDeliveryEstimate] = useState(null);
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
   
   // Pincode lookup using custom hook
   const [showPostOfficeDropdown, setShowPostOfficeDropdown] = useState(false);
@@ -77,6 +80,12 @@ export default function Checkout() {
     });
     setDiscount(Math.min(totalDiscount, subtotal));
   }, [subtotal, appliedCoupons]);
+
+  useEffect(() => {
+    if (selectedAddressIndex !== null && addresses[selectedAddressIndex]) {
+      checkDeliveryEstimate();
+    }
+  }, [selectedAddressIndex, addresses]);
 
   const fetchAddresses = async () => {
     try {
@@ -178,7 +187,7 @@ export default function Checkout() {
       await api.post('/auth/address', newAddress);
       fetchAddresses();
       setShowAddForm(false);
-      setNewAddress({ name: '', phoneNumber: '', street: '', city: '', state: '', pincode: '' });
+      setNewAddress({ name: '', phoneNumber: '', street: '', city: '', state: '', pincode: '', area: '', houseNo: '', district: '' });
       toast.success('Address added successfully');
     } catch (error) {
       toast.error('Failed to add address');
@@ -227,6 +236,32 @@ export default function Checkout() {
     toast.info('Coupon removed');
   };
 
+  const checkDeliveryEstimate = async () => {
+    if (selectedAddressIndex === null || !addresses[selectedAddressIndex]) {
+      return;
+    }
+
+    const pincode = addresses[selectedAddressIndex].pincode;
+    if (!pincode || pincode.length !== 6) return;
+
+    setCheckingDelivery(true);
+    try {
+      const weight = cartItems.reduce((sum, item) => sum + (item.weight || 0.5) * item.quantity, 0) || 0.5;
+      const response = await api.post('/shipping/check-delivery', { pincode, weight });
+      
+      if (response.data.success && response.data.available) {
+        setDeliveryEstimate(response.data.deliveryEstimate);
+      } else {
+        setDeliveryEstimate(null);
+      }
+    } catch (error) {
+      console.error('Error checking delivery:', error);
+      setDeliveryEstimate(null);
+    } finally {
+      setCheckingDelivery(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     if (selectedAddressIndex === null || !addresses[selectedAddressIndex]) {
       return toast.warning('Please select a delivery address');
@@ -239,7 +274,8 @@ export default function Checkout() {
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        image: item.image
+        image: item.image,
+        selectedVariant: item.selectedVariant
       })),
       shippingAddress: addresses[selectedAddressIndex],
       paymentMethod,
@@ -431,7 +467,7 @@ export default function Checkout() {
         <div className="lg:col-span-2 space-y-8">
           
           {/* Address Section */}
-          <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-sm border border-[#D4A96A]/20">
+          <div className="bg-white p-5 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-sm border border-[#D4A96A]/20">
             <h2 className="text-2xl font-black text-[#6B3F1F] mb-6">Delivery Address</h2>
             
             <div className="space-y-4">
@@ -533,7 +569,7 @@ export default function Checkout() {
           </div>
 
           {/* Wallet Section */}
-          <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-sm border border-[#D4A96A]/20">
+          <div className="bg-white p-5 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-sm border border-[#D4A96A]/20">
             <h2 className="text-2xl font-black text-[#6B3F1F] mb-6">BakeMart Wallet</h2>
             <div className={`p-6 rounded-[24px] border-2 transition-all duration-500 ${useWallet ? 'border-[#6B3F1F] bg-[#6B3F1F]/5 shadow-inner' : 'border-gray-100 bg-gray-50/50'}`}>
                 <div className="flex items-center justify-between">
@@ -568,10 +604,46 @@ export default function Checkout() {
                     </div>
                 )}
             </div>
+
+            {/* Delivery Estimate */}
+            {selectedAddressIndex !== null && addresses[selectedAddressIndex] && (
+              <div className="mt-6 p-4 bg-[#FDF6EC] rounded-2xl border border-[#D4A96A]/20">
+                {checkingDelivery ? (
+                  <div className="flex items-center gap-3">
+                    <span className="w-5 h-5 border-2 border-[#6B3F1F]/30 border-t-[#6B3F1F] rounded-full animate-spin"></span>
+                    <span className="text-sm font-medium text-[#6B3F1F]">Checking delivery...</span>
+                  </div>
+                ) : deliveryEstimate ? (
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-green-100 rounded-xl">
+                      <FiTruck className="text-green-600" size={24} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Estimated Delivery</p>
+                      <p className="font-black text-[#6B3F1F] text-lg">{deliveryEstimate.dateRange}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">{deliveryEstimate.courierName}</span>
+                        {deliveryEstimate.deliveryInfo && (
+                          <span className="text-xs text-gray-500">{deliveryEstimate.deliveryInfo}</span>
+                        )}
+                        {deliveryEstimate.isCODAvailable && (
+                          <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">COD</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-gray-500">
+                    <FiMapPin size={18} />
+                    <span className="text-sm">Delivery estimate unavailable for this pincode</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Payment Section */}
-          <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-sm border border-[#D4A96A]/20">
+          <div className="bg-white p-5 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-sm border border-[#D4A96A]/20">
             <h2 className="text-2xl font-black text-[#6B3F1F] mb-6">Payment Method</h2>
             
             {finalRemainingAmount <= 0 ? (
@@ -607,9 +679,9 @@ export default function Checkout() {
                   <div className={`rounded-2xl border-2 transition-all overflow-hidden ${paymentMethod === 'UPI' ? 'border-[#6B3F1F] bg-[#6B3F1F]/5' : 'border-gray-100 hover:border-[#D4A96A]/50'}`}>
                     <label className="flex items-center gap-4 p-4 cursor-pointer">
                       <input type="radio" name="payment" value="UPI" checked={paymentMethod === 'UPI'} onChange={() => setPaymentMethod('UPI')} className="w-5 h-5 text-[#6B3F1F]" />
-                      <div className="flex flex-col flex-grow">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-[#6B3F1F]">UPI (Google Pay, PhonePe, Paytm)</span>
+                      <div className="flex flex-col flex-grow min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                          <span className="font-bold text-[#6B3F1F] truncate break-words whitespace-normal leading-tight">UPI (Google Pay, PhonePe)</span>
                           <div className="flex gap-2 items-center opacity-90">
                             <img src="https://img.icons8.com/color/48/google-pay-india.png" alt="GPay" className="h-5 sm:h-6" />
                             <img src="https://img.icons8.com/color/48/phonepe.png" alt="PhonePe" className="h-5 sm:h-6" />
@@ -654,7 +726,7 @@ export default function Checkout() {
 
         {/* Right Column - Order Summary */}
         <div className="space-y-6">
-          <div className="bg-[#6B3F1F] p-6 sm:p-8 rounded-[40px] text-[#FDF6EC] shadow-2xl sticky top-24">
+          <div className="bg-[#6B3F1F] p-5 sm:p-8 rounded-[30px] sm:rounded-[40px] text-[#FDF6EC] shadow-2xl sticky top-24">
             <h2 className="text-2xl font-black mb-6">Your Order</h2>
             
             <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
@@ -670,6 +742,9 @@ export default function Checkout() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-bold truncate">{item.name}</p>
+                      {item.selectedVariant && (
+                        <p className="text-[10px] text-white/60">Variant: {item.selectedVariant.name}</p>
+                      )}
                       <p className="text-[10px] opacity-70">Qty: {item.quantity}</p>
                     </div>
                   </div>

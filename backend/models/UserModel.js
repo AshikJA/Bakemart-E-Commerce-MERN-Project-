@@ -67,6 +67,12 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    wishlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+      },
+    ],
     walletBalance: { type: Number, default: 0 },
     banReason: { type: String, default: null },
     bannedAt: { type: Date, default: null },
@@ -95,6 +101,30 @@ userSchema.methods.comparePassword = function (candidatePassword) {
 
 userSchema.methods.compareConfirmPassword = function (candidateConfirmPassword) {
   return bcrypt.compare(candidateConfirmPassword, this.confirmPassword);
+};
+
+userSchema.methods.compareCurrentPassword = function (candidateCurrentPassword) {
+  return bcrypt.compare(candidateCurrentPassword, this.password);
+};
+
+userSchema.methods.compareNewPassword = function (candidateNewPassword) {
+  return bcrypt.compare(candidateNewPassword, this.password);
+};
+
+userSchema.methods.compareConfirmNewPassword = function (candidateConfirmNewPassword) {
+  return bcrypt.compare(candidateConfirmNewPassword, this.confirmPassword);
+};
+ 
+userSchema.methods.changePassword = function (currentPassword, newPassword, confirmNewPassword) {
+  if (!this.compareCurrentPassword(currentPassword)) {
+    throw new Error('Incorrect current password');
+  }
+  if (newPassword !== confirmNewPassword) {
+    throw new Error('New password and confirm new password do not match');
+  }
+  this.password = newPassword;
+  this.confirmPassword = confirmNewPassword;
+  return this.save();
 };
 
 userSchema.methods.getPublicProfile = function () {

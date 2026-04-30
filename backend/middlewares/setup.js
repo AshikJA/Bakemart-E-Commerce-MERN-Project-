@@ -1,6 +1,7 @@
 const cors = require('cors');
 const helmet = require('helmet');
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const { generalLimiter, authLimiter, searchLimiter } = require('./rateLimiter');
 const config = require('../config/config'); 
@@ -42,6 +43,7 @@ function setupMiddlewares(app) {
   app.use(helmet({
     crossOriginResourcePolicy: false,
   }));
+  app.use(compression());
 
   const corsOptions = {
     origin: config.CORS.ORIGIN,

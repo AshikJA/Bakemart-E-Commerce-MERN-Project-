@@ -29,3 +29,7 @@ coverage/
 
 # Backend Config
 backend/config/config.js
+
+
+*.pem
+.env

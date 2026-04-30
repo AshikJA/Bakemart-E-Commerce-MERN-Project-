@@ -4,7 +4,6 @@ import UsersRoutes from './routes/UsersRoutes'
 import AdminRoutes from './routes/AdminRoutes'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Chatbot from './components/Chatbot';
 import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './context/AuthContext';
 
@@ -18,7 +17,7 @@ function App() {
           <Route path="/*" element={<UsersRoutes />} />
           <Route path="/admin/*" element={<AdminRoutes />} />
         </Routes>
-        <Chatbot />
+        
       </div>
     </AuthProvider>
   )
