@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules/
 
 # Environment Variables
+*.pem
 .env
 .env.local
 .env.development.local
@@ -26,10 +27,3 @@ coverage/
 .vscode/
 .idea/
 .DS_Store
-
-# Backend Config
-backend/config/config.js
-
-
-*.pem
-.env
