@@ -25,7 +25,7 @@ function AdminRoutes() {
     <div>
       <Suspense fallback={<Loading />}>
         <Routes>
-            <Route path="login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
+            <Route path="login" element={<PublicRoute adminRoute={true}><AdminLogin /></PublicRoute>} />
             <Route path="dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDasboard /></ProtectedRoute>} />
             <Route path="add-category" element={<ProtectedRoute requireAdmin={true}><AddCategory /></ProtectedRoute>} />
             <Route path="view-orders" element={<ProtectedRoute requireAdmin={true}><AdminOrders /></ProtectedRoute>} />
