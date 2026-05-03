@@ -23,7 +23,9 @@ module.exports = {
       process.env.FRONTEND_URL || 'http://localhost:5173', 
       'http://127.0.0.1:5173',
       'http://localhost:5000',
-      'http://192.168.1.111:5173'
+      'http://192.168.1.111:5173',
+      "http://bakemart.duckdns.org:3000",
+      "http://13.51.204.87:3000"
     ],
     CREDENTIALS: true,
     METHODS: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
