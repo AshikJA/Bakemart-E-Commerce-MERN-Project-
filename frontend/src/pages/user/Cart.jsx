@@ -44,8 +44,8 @@ function Cart() {
   };
 
   const handleRemove = (item) => {
-    const uniqueKey = item.cartItemId || item._id + (item.selectedVariant ? `-${item.selectedVariant.name}` : '');
-    setCartItems(prev => prev.filter(i => (i.cartItemId || i._id + (i.selectedVariant ? `-${i.selectedVariant.name}` : '')) !== uniqueKey));
+    const uniqueKey = item.cartItemId || item._id + (item.selectedVariant?.name ? `-${item.selectedVariant.name}` : '');
+    setCartItems(prev => prev.filter(i => (i.cartItemId || i._id + (i.selectedVariant?.name ? `-${i.selectedVariant.name}` : '')) !== uniqueKey));
     removeFromCart(item._id, item.selectedVariant);
     toast.info('Item removed from cart');
   };
@@ -132,7 +132,7 @@ function Cart() {
         <div className="grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => {
-              const uniqueKey = item.cartItemId || item._id + (item.selectedVariant ? `-${item.selectedVariant.name}` : '');
+              const uniqueKey = item.cartItemId || item._id + (item.selectedVariant?.name ? `-${item.selectedVariant.name}` : '');
               return (
                 <div key={uniqueKey} className="relative bg-white p-4 sm:p-5 rounded-[24px] sm:rounded-[32px] shadow-sm border border-[#D4A96A]/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6 group hover:shadow-md transition-shadow overflow-hidden">
                   <button 

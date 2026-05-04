@@ -63,7 +63,7 @@ export const addToCart = async (product, quantity = 1, selectedVariant = null) =
   } else {
     const cart = getLocalCart();
     const cartKey = product._id + (selectedVariant ? `-${selectedVariant.name}` : '');
-    const existingItemIndex = cart.findIndex(item => item._id + (item.selectedVariant ? `-${item.selectedVariant.name}` : '') === cartKey);
+    const existingItemIndex = cart.findIndex(item => item._id + (item.selectedVariant?.name ? `-${item.selectedVariant.name}` : '') === cartKey);
     if (existingItemIndex > -1) {
       cart[existingItemIndex].quantity += quantity;
     } else {
@@ -94,7 +94,7 @@ export const removeFromCart = async (productId, variant = null) => {
   } else {
     const cart = getLocalCart();
     const updatedCart = cart.filter(item => 
-      !(item._id === productId && (variant ? item.selectedVariant?.name === variant.name : !item.selectedVariant))
+      !(item._id === productId && (variant ? item.selectedVariant?.name === variant.name : !item.selectedVariant?.name))
     );
     localStorage.setItem('cart', JSON.stringify(updatedCart));
     window.dispatchEvent(new Event('cartUpdated'));
@@ -113,7 +113,7 @@ export const updateQuantityInCart = async (productId, quantity, variant = null) 
       const cart = getLocalCart();
       const itemIndex = cart.findIndex(item => 
         item._id === productId && 
-        (variant ? item.selectedVariant?.name === variant.name : !item.selectedVariant)
+        (variant ? item.selectedVariant?.name === variant.name : !item.selectedVariant?.name)
       );
       if (itemIndex > -1) {
         cart[itemIndex].quantity = quantity;

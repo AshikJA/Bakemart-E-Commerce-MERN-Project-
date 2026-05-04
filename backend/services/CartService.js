@@ -34,7 +34,7 @@ class CartService {
             const variantName = variant ? variant.name : null;
             const item = cart.items.find(item => 
                 item.product.toString() === productId && 
-                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant)
+                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant?.name)
             );
 
             if (item) {
@@ -60,7 +60,7 @@ class CartService {
             const variantName = variant ? variant.name : null;
             const item = cart.items.find(item => 
                 item.product.toString() === productId && 
-                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant)
+                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant?.name)
             );
 
             if (!item) {
@@ -83,7 +83,7 @@ class CartService {
             }
             cart.items = cart.items.filter(item => 
                 !(item.product.toString() === productId && 
-                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant))
+                (variantName ? item.selectedVariant?.name === variantName : !item.selectedVariant?.name))
             );
             await cart.save();
             return cart;
@@ -127,7 +127,7 @@ class CartService {
             for (const localItem of validItems) {
                 const item = cart.items.find(item => 
                     item.product.toString() === localItem.product && 
-                    (localItem.selectedVariant ? item.selectedVariant?.name === localItem.selectedVariant.name : !item.selectedVariant)
+                    (localItem.selectedVariant ? item.selectedVariant?.name === localItem.selectedVariant.name : !item.selectedVariant?.name)
                 );
                 if (item) {
                     item.quantity += localItem.quantity;
