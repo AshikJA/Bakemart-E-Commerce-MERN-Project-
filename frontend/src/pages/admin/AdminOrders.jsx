@@ -391,7 +391,7 @@ export default function AdminOrders() {
                     {selectedOrder.items.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100/50">
                         <img 
-                          src={item.image ? `http://localhost:5000/uploads/${item.image}` : 'https://via.placeholder.com/80'} 
+                          src={item.image ? (item.image.startsWith('http') ? item.image : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${item.image}`) : 'https://via.placeholder.com/80'} 
                           alt={item.name} 
                           className="w-20 h-20 object-cover rounded-lg bg-slate-100"
                         />
