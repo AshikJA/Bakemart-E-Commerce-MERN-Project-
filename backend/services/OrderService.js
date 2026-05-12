@@ -78,7 +78,12 @@ class OrderService {
                 let updateQuery = {};
                 let options = {};
                 if (item.selectedVariant) {
-                    updateQuery = { $inc: { 'variants.$[v].stock': -item.quantity } };
+                    updateQuery = { 
+                        $inc: { 
+                            'variants.$[v].stock': -item.quantity,
+                            'stock': -item.quantity 
+                        } 
+                    };
                     options = { arrayFilters: [{ 'v.name': item.selectedVariant.name }] };
                 } else {
                     updateQuery = { $inc: { stock: -item.quantity } };
@@ -89,7 +94,13 @@ class OrderService {
                 itemsToRollback.push({
                     product: item.product,
                     quantity: item.quantity,
-                    query: item.selectedVariant ? { $inc: { 'variants.$[v].stock': item.quantity } } : { $inc: { stock: item.quantity } },
+                    selectedVariant: item.selectedVariant, // Keep track of variant for rollback
+                    query: item.selectedVariant ? { 
+                        $inc: { 
+                            'variants.$[v].stock': item.quantity,
+                            'stock': item.quantity 
+                        } 
+                    } : { $inc: { stock: item.quantity } },
                     opts: item.selectedVariant ? { arrayFilters: [{ 'v.name': item.selectedVariant.name }] } : {}
                 });
 
@@ -277,9 +288,31 @@ class OrderService {
             if (!order) {
                 return res.status(404).json({ message: 'Order not found' });
             }
-            if (order.orderStatus !== 'processing') {
+            if (order.orderStatus !== 'processing' && order.orderStatus !== 'pending') {
                 return res.status(400).json({ message: 'Order cannot be cancelled' });
             }
+
+            // Restore stock
+            for (const item of order.items) {
+                if (item.selectedVariant && item.selectedVariant.name) {
+                    await Product.findByIdAndUpdate(
+                        item.product,
+                        { 
+                            $inc: { 
+                                'variants.$[v].stock': item.quantity,
+                                'stock': item.quantity 
+                            } 
+                        },
+                        { arrayFilters: [{ 'v.name': item.selectedVariant.name }] }
+                    );
+                } else {
+                    await Product.findByIdAndUpdate(
+                        item.product,
+                        { $inc: { stock: item.quantity } }
+                    );
+                }
+            }
+
             const user = await User.findById(order.user).select('email');
             order.orderStatus = 'cancelled';
             await order.save();
@@ -304,6 +337,7 @@ class OrderService {
 
             const user = await User.findById(order.user).select('email');
 
+            const oldStatus = order.orderStatus;
             if (orderStatus) {
                 order.orderStatus = orderStatus;
 
@@ -312,8 +346,55 @@ class OrderService {
                 } else if (orderStatus === 'delivered' && statusDate) {
                     order.deliveredAt = new Date(statusDate);
                 }
+
+                // Restore stock if changing TO cancelled or returned from a non-cancelled/non-returned status
+                if ((orderStatus === 'cancelled' || orderStatus === 'returned') && 
+                    (oldStatus !== 'cancelled' && oldStatus !== 'returned')) {
+                    for (const item of order.items) {
+                        if (item.selectedVariant && item.selectedVariant.name) {
+                            await Product.findByIdAndUpdate(
+                                item.product,
+                                { 
+                                    $inc: { 
+                                        'variants.$[v].stock': item.quantity,
+                                        'stock': item.quantity 
+                                    } 
+                                },
+                                { arrayFilters: [{ 'v.name': item.selectedVariant.name }] }
+                            );
+                        } else {
+                            await Product.findByIdAndUpdate(
+                                item.product,
+                                { $inc: { stock: item.quantity } }
+                            );
+                        }
+                    }
+                }
             } else if (req.body.status) {
-                order.orderStatus = req.body.status;
+                const newStatus = req.body.status;
+                if ((newStatus === 'cancelled' || newStatus === 'returned') && 
+                    (oldStatus !== 'cancelled' && oldStatus !== 'returned')) {
+                    for (const item of order.items) {
+                        if (item.selectedVariant && item.selectedVariant.name) {
+                            await Product.findByIdAndUpdate(
+                                item.product,
+                                { 
+                                    $inc: { 
+                                        'variants.$[v].stock': item.quantity,
+                                        'stock': item.quantity 
+                                    } 
+                                },
+                                { arrayFilters: [{ 'v.name': item.selectedVariant.name }] }
+                            );
+                        } else {
+                            await Product.findByIdAndUpdate(
+                                item.product,
+                                { $inc: { stock: item.quantity } }
+                            );
+                        }
+                    }
+                }
+                order.orderStatus = newStatus;
             }
 
             await order.save();
@@ -382,7 +463,12 @@ class OrderService {
                     if (item.selectedVariant && item.selectedVariant.name) {
                         await Product.findByIdAndUpdate(
                             item.product,
-                            { $inc: { 'variants.$[v].stock': item.quantity } },
+                            { 
+                                $inc: { 
+                                    'variants.$[v].stock': item.quantity,
+                                    'stock': item.quantity 
+                                } 
+                            },
                             { arrayFilters: [{ 'v.name': item.selectedVariant.name }] }
                         );
                     } else {

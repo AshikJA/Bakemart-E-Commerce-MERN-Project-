@@ -1,5 +1,6 @@
 const Order = require('../models/OrderModel');
 const User = require('../models/UserModel');
+const Product = require('../models/ProductModel');
 const WalletController = require('./WalletController');
 const { sendRefundToWalletEmail, sendRefundChoiceEmail, sendBankRefundEmail } = require('../utils/mailer');
 
@@ -88,6 +89,28 @@ const updateReturnStatus = async (req, res) => {
     order.returnRequest.resolvedAt = new Date();
     if (status === 'approved') {
       order.orderStatus = 'returned';
+
+      // Restore stock
+      for (const item of order.items) {
+        if (item.selectedVariant && item.selectedVariant.name) {
+          await Product.findByIdAndUpdate(
+            item.product,
+            { 
+              $inc: { 
+                'variants.$[v].stock': item.quantity,
+                'stock': item.quantity 
+              } 
+            },
+            { arrayFilters: [{ 'v.name': item.selectedVariant.name }] }
+          );
+        } else {
+          await Product.findByIdAndUpdate(
+            item.product,
+            { $inc: { stock: item.quantity } }
+          );
+        }
+      }
+
       if (order.paymentMethod !== 'COD') {
         try {
           const refundAmount = order.totalAmount;
