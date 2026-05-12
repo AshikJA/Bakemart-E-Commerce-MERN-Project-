@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 
 import Loading from '../components/Loading'
 import ProtectedRoute from '../components/ProtectedRoute'
@@ -22,10 +22,14 @@ const RefundsList = lazy( () => import( '../pages/admin/RefundsList'))
 const AdminBanners = lazy( () => import( '../pages/admin/AdminBanners'))
 
 function AdminRoutes() {
+  const location = useLocation()
+
+  const hideNavbarPath = ['/admin/login']
+  const shouldHideNavbar = hideNavbarPath.includes(location.pathname)
   return (
     <div>
       <Suspense fallback={<Loading />}>
-      <AdminNavbar/>
+        {!shouldHideNavbar && <AdminNavbar/>}
         <Routes>
             <Route path="login" element={<PublicRoute adminRoute={true}><AdminLogin /></PublicRoute>} />
             <Route path="dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDasboard /></ProtectedRoute>} />
