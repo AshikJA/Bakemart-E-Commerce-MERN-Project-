@@ -1,10 +1,5 @@
 const { validationResult } = require('express-validator');
 
-/**
- * Global express-validator middleware.
- * Place after validator chains. If any rule fails, it formats all errors
- * into a consistent shape and passes them to the error handler.
- */
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (errors.isEmpty()) return next();
@@ -14,7 +9,6 @@ const validate = (req, res, next) => {
     message: e.msg,
   }));
 
-  // Structured error that the global errorHandler understands
   const err = {
     name: 'ValidationError',
     status: 422, 

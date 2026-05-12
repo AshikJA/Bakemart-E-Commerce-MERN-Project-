@@ -51,27 +51,11 @@ export default function AdminDasboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/admin/login', { replace: true });
-  };
+
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
-      {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          {/* Logo Placeholder */}
-          <span className="font-semibold text-lg text-slate-700">Admin User</span>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium"
-        >
-          <LogoutIcon />
-          Logout
-        </button>
-      </header>
+     
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         

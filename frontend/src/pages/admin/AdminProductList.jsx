@@ -17,17 +17,34 @@ export default function AdminProductList() {
   const [newImages, setNewImages] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, product: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(currentPage);
     fetchCategories();
-  }, []);
+  }, [currentPage]);
 
-  const fetchProducts = async () => {
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const fetchProducts = async (page = 1) => {
+    setLoading(true);
     try {
-      const res = await api.get('/admin/products');
-      setProducts(res.data.products || res.data)
-      
+      const res = await api.get(`/admin/products?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      const data = res.data;
+      if (data.pagination) {
+        setProducts(data.products);
+        setTotalPages(data.pagination.pages);
+        setTotalProducts(data.pagination.total);
+      } else {
+        setProducts(data.products || data);
+        setTotalPages(1);
+        setTotalProducts((data.products || data).length);
+      }
     } catch (err) {
       toast.error('Failed to fetch products');
     } finally {
@@ -118,7 +135,7 @@ const submitEdit = async (e) => {
       toast.success('Product updated successfully!');
       setEditModal({ isOpen: false, product: null });
       setNewImages([]); setNewPreviews([]);
-      fetchProducts();
+      fetchProducts(currentPage);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update product');
     } finally {
@@ -132,16 +149,37 @@ const submitEdit = async (e) => {
       await api.delete(`/admin/delete-product/${deleteModal.product._id}`);
       toast.success('Product deleted successfully!');
       setDeleteModal({ isOpen: false, product: null });
-      fetchProducts();
+      fetchProducts(currentPage);
     } catch (err) {
       toast.error('Failed to delete product');
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = searchTerm
+    ? products.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : products;
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const delta = 2;
+    const left = Math.max(2, currentPage - delta);
+    const right = Math.min(totalPages - 1, currentPage + delta);
+    pages.push(1);
+    if (left > 2) pages.push('...');
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push('...');
+    if (totalPages > 1) pages.push(totalPages);
+    return pages;
+  };
 
   const getImageSrc = (product) => {
     const img = (product.images && product.images.length > 0) ? product.images[0] : product.image;
@@ -162,7 +200,7 @@ const submitEdit = async (e) => {
             <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
               <FiPackage className="text-blue-500" /> Product Inventory
             </h1>
-            <p className="text-slate-500 text-sm mt-1">{products.length} total products</p>
+            <p className="text-slate-500 text-sm mt-1">{totalProducts} total products</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -257,6 +295,50 @@ const submitEdit = async (e) => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <p className="text-sm text-slate-500">
+                Page <span className="font-semibold text-slate-700">{currentPage}</span> of{' '}
+                <span className="font-semibold text-slate-700">{totalPages}</span>
+                <span className="ml-2 text-slate-400">({totalProducts} products)</span>
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                >
+                  ← Prev
+                </button>
+                {getPageNumbers().map((page, idx) =>
+                  page === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 py-2 text-slate-400 text-sm">…</span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`w-9 h-9 rounded-xl text-sm font-bold transition-all shadow-sm ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white border border-blue-600 scale-105'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

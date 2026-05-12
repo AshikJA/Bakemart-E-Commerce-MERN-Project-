@@ -3,11 +3,9 @@ const errorHandler = (err, req, res, next) => {
 
   let statusCode = err.status || 500;
   let message = err.message || 'Internal Server Error';
-  // details is an array of { field, message } from express-validator or Joi
   let details = err.details || null;
 
   if (err.name === 'ValidationError') {
-    // Use 422 for express-validator errors (already carries status), fallback 400 for Joi
     statusCode = err.status || 422;
     message = err.message || 'Validation failed';
   } else if (err.name === 'JsonWebTokenError') {
@@ -31,7 +29,6 @@ const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
-    // field-level errors array — frontend can use this to highlight specific fields
     details,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });

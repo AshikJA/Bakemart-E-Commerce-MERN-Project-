@@ -15,7 +15,6 @@ const verifyToken = (token) => {
   try {
     return jwt.verify(token, config.JWT_SECRET);
   } catch (error) {
-    console.log('Error verifying token:', error);
     throw new Error('Error verifying token');
   }
 }

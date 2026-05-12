@@ -16,7 +16,6 @@ const verifyAdminToken = (token) => {
   try {
     return jwt.verify(token, config.ADMIN_JWT_SECRET);
   } catch (error) {
-    console.error('Error verifying admin token:', error);
     throw new Error('Error verifying admin token');
   }
 };

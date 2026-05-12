@@ -9,7 +9,7 @@ const addBannerValidator = [
   body('url')
     .optional()
     .trim()
-    .isURL().withMessage('Please enter a valid URL'),
+    .isURL({ require_tld: false }).withMessage('Please enter a valid URL'),
 ];
 
 const updateBannerValidator = [
@@ -22,7 +22,7 @@ const updateBannerValidator = [
   body('url')
     .optional()
     .trim()
-    .isURL().withMessage('Please enter a valid URL'),
+    .isURL({ require_tld: false }).withMessage('Please enter a valid URL'),
 ];
 
 module.exports = {

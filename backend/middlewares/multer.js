@@ -109,24 +109,18 @@ const handleUpload = (uploadFn) => (req, res, next) => {
 
 const extractPublicId = (imageUrl) => {
   if (!imageUrl) return null;
-  
-  // Handle URLs with transformation params (f_auto,q_auto, etc.)
-  // Pattern: .../upload/<transforms>/<folder>/.<ext> OR .../upload/v<ver>/<folder>/.<ext>
+
   const match = imageUrl.match(/\/upload\/([^/]+)\/([^.]+)/);
   if (match) {
     let publicId = match[2];
-    // If first group contains 'v' version, it's already clean
-    // If it contains transformations (like f_auto,q_auto), they're in first group but we don't need them
     return publicId;
   }
-  
-  // Fallback: try splitting by /
+
   try {
     const urlParts = imageUrl.split('/');
     const uploadIndex = urlParts.indexOf('upload');
     if (uploadIndex !== -1) {
       const afterUpload = urlParts.slice(uploadIndex + 1);
-      // Skip version (v123) or transformation params (f_auto, etc.)
       const startIdx = (/^v\d+$/.test(afterUpload[0]) || /,/.test(afterUpload[0])) ? 1 : 0;
       const publicIdWithExt = afterUpload.slice(startIdx).join('/');
       return publicIdWithExt.replace(/\.[^/.]+$/, '');
@@ -149,12 +143,8 @@ const deleteImage = async (imageUrl) => {
   }
 };
 
-// ─── Get Public ID from Uploaded File ──────────────────────────────────
-// Returns public_id from multer req.files - use this when saving to DB
-
 const getPublicIdFromFile = (file) => {
   if (!file) return null;
-  // file.public_id is set by CloudinaryStorage in the file object
   return file.public_id || extractPublicId(file.path);
 };
 

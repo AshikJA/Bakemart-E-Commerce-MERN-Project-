@@ -24,7 +24,7 @@ const submitReturnRequest = async (req, res) => {
     if (order.returnRequest && order.returnRequest.requested) {
       return res.status(400).json({ message: 'Return request already submitted for this order' });
     }
-    const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+    const images = req.files ? req.files.map(file => file.path || `/uploads/${file.filename}`) : [];
     order.returnRequest = {
       requested: true,
       reason: reason || 'No reason provided',
@@ -116,14 +116,33 @@ const updateReturnStatus = async (req, res) => {
           order.refund.failureReason = 'Internal wallet credit failure';
         }
       } else {
-        if (!order.refund) order.refund = {};
-        order.refund.pendingMethod = true;
-        order.refund.amount = order.totalAmount;
-        order.refund.status = 'pending';
-        
-        const userObj = await User.findById(order.user).select('email name');
-        if (userObj) {
-          await sendRefundChoiceEmail(userObj.email, order.totalAmount, order._id);
+        // COD orders: credit wallet as refund (cash can't be returned)
+        try {
+          const refundAmount = order.totalAmount;
+          await WalletController.creditWallet(
+            order.user,
+            refundAmount,
+            `Refund for COD Order #${order._id.toString()}`,
+            order._id
+          );
+          order.refund = {
+            initiated: true,
+            method: 'wallet',
+            status: 'processed',
+            amount: refundAmount,
+            initiatedAt: new Date(),
+            processedAt: new Date()
+          };
+          order.paymentStatus = 'refunded';
+          const userObj = await User.findById(order.user).select('email name walletBalance');
+          if (userObj) {
+            await sendRefundToWalletEmail(userObj.email, refundAmount, userObj.walletBalance, order._id);
+          }
+        } catch (walletError) {
+          console.error('Error crediting wallet for COD return:', walletError);
+          if (!order.refund) order.refund = {};
+          order.refund.status = 'failed';
+          order.refund.failureReason = 'Wallet credit failure';
         }
       }
     }

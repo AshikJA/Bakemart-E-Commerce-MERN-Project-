@@ -8,9 +8,15 @@ export default function ReturnRequests() {
   const navigate = useNavigate();
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('all');
   const [selectedImage, setSelectedImage] = useState(null);
+  // Helper to resolve image URLs (handles Cloudinary full URLs or local uploads)
+  const getImageSrc = (img) => {
+    if (!img) return 'https://via.placeholder.com/100?text=No+Img';
+    if (img.startsWith('http')) return img;
+    return `${api.defaults.baseURL.replace('/api', '')}${img}`;
+  };
   const [adminNote, setAdminNote] = useState({});
+  const [activeFilter, setActiveFilter] = useState('all');
   const [processing, setProcessing] = useState(null);
   const [refunding, setRefunding] = useState(null);
 
@@ -239,7 +245,7 @@ export default function ReturnRequests() {
                               className="relative group"
                             >
                               <img 
-                                src={`${api.defaults.baseURL.replace('/api', '')}${img.replace('/uploads/returns/', '/uploads/')}`}
+                                src={getImageSrc(img)}
                                 alt={`Product image ${idx + 1}`}
                                 className="w-20 h-20 object-cover rounded-xl border-2 border-slate-100 group-hover:border-[#D4A96A] transition-colors"
                               />
@@ -260,7 +266,7 @@ export default function ReturnRequests() {
                           <div key={idx} className="flex justify-between items-center text-sm">
                             <div className="flex items-center gap-3">
                               <img 
-                                src={item.image ? `${api.defaults.baseURL.replace('/api', '')}/uploads/${item.image}` : 'https://via.placeholder.com/40'}
+                                src={getImageSrc(item.image || '')}
                                 alt={item.name}
                                 className="w-10 h-10 rounded-lg object-cover bg-white"
                               />
@@ -340,7 +346,7 @@ export default function ReturnRequests() {
                             </div>
 
                             {/* Refund Action/Status */}
-                            {order.returnRequest.status === 'approved' && order.paymentMethod !== 'COD' && (
+                            {order.returnRequest.status === 'approved' && (
                               <div className="w-full sm:w-auto">
                                 {!order.refund?.initiated ? (
                                   <button
@@ -396,9 +402,9 @@ export default function ReturnRequests() {
             onClick={() => setSelectedImage(null)}
           >
             <FiX size={24} />
-          </button>
+          </button> 
           <img 
-            src={`${api.defaults.baseURL.replace('/api', '')}${selectedImage.replace('/uploads/returns/', '/uploads/')}`}
+            src={getImageSrc(selectedImage)}
             alt="Full size"
             className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}

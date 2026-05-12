@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom'
 import Loading from '../components/Loading'
 import ProtectedRoute from '../components/ProtectedRoute'
 import PublicRoute from '../components/PublicRoute' 
+import AdminNavbar from '../components/AdminNavbar'
 
 const AdminLogin = lazy( () => import( '../pages/admin/AdminLogin'))
 const AdminDasboard = lazy( () => import( '../pages/admin/AdminDasboard'))
@@ -24,6 +25,7 @@ function AdminRoutes() {
   return (
     <div>
       <Suspense fallback={<Loading />}>
+      <AdminNavbar/>
         <Routes>
             <Route path="login" element={<PublicRoute adminRoute={true}><AdminLogin /></PublicRoute>} />
             <Route path="dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDasboard /></ProtectedRoute>} />
